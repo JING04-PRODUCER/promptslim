@@ -4,7 +4,8 @@
 
 [🌐 English](README.md) | [中文](README_zh.md)
 
-[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/JING04-PRODUCER/agent-orchestrator/actions/workflows/python-test.yml/badge.svg)](https://github.com/JING04-PRODUCER/agent-orchestrator/actions/workflows/python-test.yml)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Java](https://img.shields.io/badge/java-17-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/spring--boot-3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal.svg)](https://fastapi.tiangolo.com/)
