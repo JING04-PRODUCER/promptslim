@@ -42,9 +42,11 @@ class ToolRegistry:
             cls._instance._tools = {}  # 实例变量
         return cls._instance
 
-    def reset(self) -> None:
+    @classmethod
+    def reset(cls) -> None:
         """重置注册中心 (仅用于测试)"""
-        self._tools = {}
+        if cls._instance:
+            cls._instance._tools = {}
 
     def register(self, metadata: ToolMetadata, handler: Callable) -> None:
         """注册一个工具"""

@@ -62,7 +62,7 @@ class TestWorkflowEngine:
         results = asyncio.run(engine.run_parallel(agents, "parallel task"))
 
         assert len(results) == 3
-        names = {r["agent"] for r in results}
+        names = {r["step"] for r in results}
         assert names == {"worker_a", "worker_b", "worker_c"}
 
     def test_dag_workflow(self):

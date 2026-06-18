@@ -78,7 +78,7 @@ def read_file(
                 "content": json.dumps(data, ensure_ascii=False, indent=2),
                 "type": "json",
                 "encoding": enc,
-                "size_bytes": path.stat().st_size,
+                "size_bytes": full_path.stat().st_size,
             }
 
         # CSV 结构化读取
@@ -95,7 +95,7 @@ def read_file(
                 "type": "csv",
                 "row_count": len(rows),
                 "encoding": enc,
-                "size_bytes": path.stat().st_size,
+                "size_bytes": full_path.stat().st_size,
             }
 
         # 纯文本读取
@@ -113,7 +113,7 @@ def read_file(
             "type": "text",
             "line_count": len(lines),
             "encoding": enc,
-            "size_bytes": path.stat().st_size,
+            "size_bytes": full_path.stat().st_size,
         }
 
     except Exception as e:

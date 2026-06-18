@@ -11,6 +11,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 必须在导入 file_reader 之前设置，因为 ALLOWED_BASE 在模块加载时计算
+os.environ["FILE_READER_BASE"] = tempfile.gettempdir()
+
 from tools.registry import ToolRegistry, ToolMetadata, ToolParameter, tool_registry
 from tools.file_reader import read_file, _detect_encoding
 

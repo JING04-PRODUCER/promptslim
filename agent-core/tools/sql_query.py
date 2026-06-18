@@ -2,6 +2,8 @@
 SQL 查询工具 - 安全的参数化查询封装、连接池、自动重试
 """
 
+from __future__ import annotations
+
 from typing import Optional, Any
 
 from tools.registry import ToolMetadata, ToolParameter, tool_registry
