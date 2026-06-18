@@ -2,6 +2,8 @@
 
 **AI Prompt Slimming Toolkit — reduce token consumption at the source before every API call.**
 
+[🌐 English](README.md) | [中文](README_zh.md)
+
 [![PyPI](https://img.shields.io/badge/pip-install-blue)](https://pypi.org)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
