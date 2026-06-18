@@ -54,8 +54,7 @@ def estimate_zh_tokens(text: str) -> int:
 def count_tokens_batch(texts: list[str], model: str = "gpt-4o") -> list[int]:
     """批量计数"""
     enc = _get_encoding(model)
-    tokens = enc.encode_ordinary_batch(texts)
-    return [len(t) for t in tokens]
+    return [len(enc.encode_ordinary(t)) for t in texts]
 
 
 def cost_estimate(text: str, model: str, is_input: bool = True) -> float:
