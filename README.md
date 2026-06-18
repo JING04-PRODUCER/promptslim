@@ -2,6 +2,8 @@
 
 **Cross-language AI Agent orchestration platform — Python FastAPI inference core + Java Spring Boot admin panel. Build LLM agents with tool calling, multi-agent workflows, and visual management in minutes.**
 
+[🌐 English](README.md) | [中文](README_zh.md)
+
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![Java](https://img.shields.io/badge/java-21-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/spring--boot-3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
