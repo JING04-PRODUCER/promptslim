@@ -24,11 +24,6 @@ _STRONG_CODE_PATTERNS = [
     r":\s*\w.*[,)]",
 ]
 
-_WEAK_CODE_PATTERNS = [
-    r"=\s*[^=]",
-    r"\b(return|import|export|function|const|let|var|class|def|if|else|for|while|try|catch|except|with|async|await)\b",
-]
-
 
 def _is_code_like(text: str) -> bool:
     """检测文本是否像代码或结构化内容，如果是则跳过压缩"""

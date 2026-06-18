@@ -28,7 +28,6 @@ ENCODINGS = {
 
 # 中文 Token 估算系数（约 1.5~2 字符 = 1 token，中文用 cl100k 大约是 1.3~1.6）
 ZH_CHAR_PER_TOKEN = 1.5
-EN_WORD_PER_TOKEN = 0.75  # 英文约 0.75 词 = 1 token
 
 _caches: dict[str, tiktoken.Encoding] = {}
 

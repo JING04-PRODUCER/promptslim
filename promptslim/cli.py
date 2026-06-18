@@ -36,6 +36,8 @@ def _build_parser():
     sm.add_argument("input", help="文本内容 / 文件路径（用 file: 前缀）")
     sm.add_argument("-m", "--model", default="gpt-4o-mini", help="压缩用模型（默认 gpt-4o-mini）")
     sm.add_argument("--max-tokens", type=int, default=2048, help="压缩后最大 Token 数（默认 2048）")
+    sm.add_argument("--base-url", help="自定义 API 地址")
+    sm.add_argument("--api-key", help="API 密钥")
     sm.add_argument("-o", "--output", help="输出文件路径")
     sm.add_argument("--json", action="store_true", help="JSON 格式输出")
 
@@ -54,14 +56,6 @@ def _read_input(raw: str) -> str:
     if Path(raw).exists():
         return Path(raw).read_text(encoding="utf-8")
     return raw
-
-
-def _color_pct(pct: float) -> str:
-    if pct <= 0:
-        return f"[dim]{pct}%[/]"
-    if pct < 10:
-        return f"[yellow]{pct}%[/]"
-    return f"[green]{pct}%[/]"
 
 
 def cmd_count(args):
@@ -134,7 +128,8 @@ def cmd_smart(args):
     from .compressor import smart_slim
 
     text = _read_input(args.input)
-    report = smart_slim(text, args.model, args.max_tokens)
+    report = smart_slim(text, args.model, args.max_tokens,
+                        base_url=args.base_url, api_key=args.api_key)
 
     if args.output:
         Path(args.output).write_text(report.slimmed, encoding="utf-8")

@@ -85,8 +85,10 @@ def smart_slim(
             slimmed = data["choices"][0]["message"]["content"]
             return SlimReport(original, slimmed.strip(), model)
 
-    except Exception:
-        pass
-
-    # API 不可用时回退到规则瘦身
-    return SlimReport(original, quick, model)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"LLM compression failed: {e}, falling back to rule-based slimming")
+        report = SlimReport(original, quick, model)
+        report.metadata["compression_error"] = str(e)
+        return report
