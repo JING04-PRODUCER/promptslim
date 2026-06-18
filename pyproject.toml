@@ -1,6 +1,6 @@
 [project]
 name = "promptslim"
-version = "0.3.0"
+version = "0.3.1"
 description = "AI Prompt Slimming Toolkit — reduce token consumption at the source before every API call. 40+ Chinese & English redundancy patterns, code protection, Anthropic Prompt Caching analysis."
 readme = "README.md"
 license = {text = "MIT"}
