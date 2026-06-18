@@ -120,6 +120,10 @@ promptslim/
 - [ ] 批量处理目录
 - [ ] LangChain / LlamaIndex 集成
 
+## 🤖 AI 辅助说明
+
+本项目在开发过程中使用了 Claude (Anthropic) 作为编程辅助工具。AI 贡献包括代码结构建议、测试生成和文档撰写辅助。所有 AI 生成的代码均经过人工审查和验证，项目的设计决策和核心逻辑由开发者独立完成。
+
 ## 许可证
 
 MIT — 详见 [LICENSE](LICENSE)
