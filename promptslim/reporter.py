@@ -30,6 +30,8 @@ class SlimReport:
         from .tokenizer import count_tokens
 
         self.model = model
+        self.original = original
+        self.slimmed = slimmed
         self.original_len = len(original)
         self.slimmed_len = len(slimmed)
         self.original_tokens = count_tokens(original, model)

@@ -91,9 +91,7 @@ def cmd_slim(args):
     report = quick_slim(text, args.model)
 
     if args.output:
-        from .redundancy import strip_redundancy
-        slimmed, _, _ = strip_redundancy(text)
-        Path(args.output).write_text(slimmed, encoding="utf-8")
+        Path(args.output).write_text(report.slimmed, encoding="utf-8")
 
     if args.json:
         print(json.dumps(report.to_dict(), ensure_ascii=False))
@@ -108,7 +106,7 @@ def cmd_smart(args):
     report = smart_slim(text, args.model, args.max_tokens)
 
     if args.output:
-        Path(args.output).write_text(report.slimmed() if hasattr(report, 'slimmed') else "", encoding="utf-8")
+        Path(args.output).write_text(report.slimmed, encoding="utf-8")
 
     if args.json:
         print(json.dumps(report.to_dict(), ensure_ascii=False))
