@@ -25,6 +25,41 @@
 
 ## Architecture
 
+```mermaid
+graph TB
+    Client[Client / SDK]
+    Admin[Spring Boot Admin<br/>port :9090]
+    Gateway[FastAPI Gateway<br/>port :8000]
+    Orchestrator[Agent Orchestrator]
+    Agent1[Agent 1]
+    Agent2[Agent 2]
+    ToolReg[Tool Registry]
+    WebSearch[Web Search]
+    FileReader[File Reader]
+    SQLExec[SQL Executor]
+    RAG[RAG Memory]
+    DB[(PostgreSQL)]
+    Redis[(Redis)]
+    AI[OpenAI-compatible API]
+
+    Client --> Admin
+    Client --> Gateway
+    Admin -->|REST API| Gateway
+    Gateway --> Orchestrator
+    Orchestrator --> Agent1
+    Orchestrator --> Agent2
+    Agent1 --> ToolReg
+    Agent2 --> ToolReg
+    ToolReg --> WebSearch
+    ToolReg --> FileReader
+    ToolReg --> SQLExec
+    Agent1 --> RAG
+    Agent2 --> RAG
+    Gateway --> DB
+    Gateway --> Redis
+    Gateway --> AI
+```
+
 ```
 ┌─────────────────────────────────────────────────┐
 │           Admin Server (Spring Boot)             │
@@ -123,6 +158,52 @@ curl -X POST http://localhost:8000/api/workflows \
 
 > Extend via plugin registry — add your own tools in minutes.
 
+## End-to-End Example
+
+### 1. Create a Code Review Agent
+
+```bash
+curl -X POST http://localhost:8000/api/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "code-reviewer",
+    "model": "claude-sonnet-4-6",
+    "system_prompt": "You are a senior code reviewer. Focus on security, performance, and best practices.",
+    "tools": ["read_file", "web_search"],
+    "max_iterations": 5
+  }'
+```
+
+### 2. Submit a Review Task
+
+```bash
+curl -X POST http://localhost:8000/api/agents/code-reviewer/run \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Review app.py for SQL injection and XSS vulnerabilities"}'
+```
+
+### 3. Check Results
+
+```bash
+curl http://localhost:8000/api/agents/code-reviewer/status
+```
+
+### 4. Multi-Agent Pipeline
+
+```bash
+curl -X POST http://localhost:8000/api/workflows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agents": ["analyzer", "code-reviewer", "tester"],
+    "task": "Full code quality audit for the auth module",
+    "mode": "sequential"
+  }'
+```
+
+### 5. View in Dashboard
+
+Open `http://localhost:9090` to see agents, tasks, and workflow status in the Spring Boot admin panel.
+
 ## RAG Memory System
 
 ```bash
@@ -167,6 +248,10 @@ curl -X POST http://localhost:8000/api/memory/recall \
 ## Contributing
 
 Issues and PRs welcome! See [contribution guide](docs/PLAN2-CONTRIBUTION-GUIDE.md) for getting started.
+
+## AI Assistance
+
+This project was developed with Claude (Anthropic) as a coding assistant. AI contributions include code structure suggestions, test generation, and documentation drafts. All AI-generated code has been reviewed and verified by the developer. Design decisions and core logic are independently authored.
 
 ## License
 

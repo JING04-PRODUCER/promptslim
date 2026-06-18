@@ -25,6 +25,41 @@
 
 ## 架构
 
+```mermaid
+graph TB
+    Client[Client / SDK]
+    Admin[Spring Boot 管理后台<br/>端口 :9090]
+    Gateway[FastAPI 网关<br/>端口 :8000]
+    Orchestrator[Agent 编排器]
+    Agent1[Agent 1]
+    Agent2[Agent 2]
+    ToolReg[工具注册中心]
+    WebSearch[网页搜索]
+    FileReader[文件读取]
+    SQLExec[SQL 执行]
+    RAG[RAG 记忆系统]
+    DB[(PostgreSQL)]
+    Redis[(Redis)]
+    AI[OpenAI 兼容 API]
+
+    Client --> Admin
+    Client --> Gateway
+    Admin -->|REST API| Gateway
+    Gateway --> Orchestrator
+    Orchestrator --> Agent1
+    Orchestrator --> Agent2
+    Agent1 --> ToolReg
+    Agent2 --> ToolReg
+    ToolReg --> WebSearch
+    ToolReg --> FileReader
+    ToolReg --> SQLExec
+    Agent1 --> RAG
+    Agent2 --> RAG
+    Gateway --> DB
+    Gateway --> Redis
+    Gateway --> AI
+```
+
 ```
 ┌─────────────────────────────────────────────────┐
 │           管理服务 (Spring Boot)                  │
@@ -123,6 +158,52 @@ curl -X POST http://localhost:8000/api/workflows \
 
 > 通过插件注册中心扩展——分钟级添加自定义工具。
 
+## 端到端示例
+
+### 1. 创建代码审查 Agent
+
+```bash
+curl -X POST http://localhost:8000/api/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "code-reviewer",
+    "model": "claude-sonnet-4-6",
+    "system_prompt": "你是一位资深代码审查专家，重点关注安全、性能与最佳实践。",
+    "tools": ["read_file", "web_search"],
+    "max_iterations": 5
+  }'
+```
+
+### 2. 提交审查任务
+
+```bash
+curl -X POST http://localhost:8000/api/agents/code-reviewer/run \
+  -H "Content-Type: application/json" \
+  -d '{"task": "审查 app.py 中的 SQL 注入和 XSS 漏洞"}'
+```
+
+### 3. 查看结果
+
+```bash
+curl http://localhost:8000/api/agents/code-reviewer/status
+```
+
+### 4. 多 Agent 流水线
+
+```bash
+curl -X POST http://localhost:8000/api/workflows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agents": ["analyzer", "code-reviewer", "tester"],
+    "task": "对认证模块进行完整代码质量审计",
+    "mode": "sequential"
+  }'
+```
+
+### 5. 查看仪表盘
+
+打开 `http://localhost:9090` 在 Spring Boot 管理面板中查看 Agent、任务和工作流状态。
+
 ## RAG 记忆系统
 
 ```bash
@@ -167,6 +248,10 @@ curl -X POST http://localhost:8000/api/memory/recall \
 ## 参与贡献
 
 欢迎 Issue 和 PR！详见[贡献指南](docs/PLAN2-CONTRIBUTION-GUIDE.md)。
+
+## 🤖 AI 辅助说明
+
+本项目在开发过程中使用了 Claude (Anthropic) 作为编程辅助工具。AI 贡献包括代码结构建议、测试生成和文档撰写辅助。所有 AI 生成的代码均经过人工审查和验证，项目的设计决策和核心逻辑由开发者独立完成。
 
 ## 许可证
 
