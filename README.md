@@ -20,10 +20,12 @@ Every word you send to an LLM costs money. Filler words, redundant phrases, and 
 
 **PromptSlim** strips redundancy at the prompt level — before it reaches the API — giving you free savings with zero code changes to your app logic.
 
+[![PyPI version](https://img.shields.io/pypi/v/promptslim?style=flat-square)](https://pypi.org/project/promptslim/)
+
 ## Quick Start
 
 ```bash
-pip install git+https://github.com/JING04-PRODUCER/promptslim.git
+pip install promptslim
 ```
 
 ### Python SDK

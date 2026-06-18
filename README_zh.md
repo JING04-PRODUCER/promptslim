@@ -18,10 +18,12 @@
 
 **PromptSlim** 在 prompt 层面剥离冗余——在请求到达 API 之前——零代码侵入，免费节省。
 
+[![PyPI version](https://img.shields.io/pypi/v/promptslim?style=flat-square)](https://pypi.org/project/promptslim/)
+
 ## 快速开始
 
 ```bash
-pip install git+https://github.com/JING04-PRODUCER/promptslim.git
+pip install promptslim
 ```
 
 ### Python SDK
