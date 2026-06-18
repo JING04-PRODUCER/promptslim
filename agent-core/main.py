@@ -21,6 +21,7 @@ from agents.llm_agent import LLMAgent
 from tools.registry import tool_registry
 from orchestration.workflow import WorkflowStep, workflow_engine
 from utils.logger import setup_logger
+from memory.rag import memory_store, init_memory
 
 # ==================== 数据模型 ====================
 
@@ -78,6 +79,9 @@ app.add_middleware(
 # ==================== Agent 运行时存储 ====================
 _agents: dict[str, LLMAgent] = {}
 
+
+# 注册内置工具
+import tools.web_search  # noqa: E402 — 导入时自动注册
 
 # ==================== 健康检查 ====================
 
@@ -209,6 +213,57 @@ async def run_workflow(req: WorkflowRequest):
         results = await workflow_engine.run_sequential(agents, req.task)
 
     return {"mode": req.mode, "agents": req.agents, "results": results}
+
+
+# ==================== Memory / RAG API ====================
+
+class RememberRequest(BaseModel):
+    content: str
+    metadata: dict | None = None
+
+
+class RecallRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+
+@app.post("/api/memory/init")
+async def init_memory_endpoint():
+    """初始化 RAG 记忆系统"""
+    settings = get_settings()
+    global memory_store
+    memory_store = init_memory(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+    )
+    return {"message": "Memory system initialized", "model": "text-embedding-3-small"}
+
+
+@app.post("/api/memory/remember")
+async def remember(req: RememberRequest):
+    """存储记忆"""
+    if memory_store is None:
+        raise HTTPException(status_code=400, detail="Memory not initialized. POST /api/memory/init first")
+    await memory_store.remember(req.content, req.metadata)
+    return {"message": "Memory stored"}
+
+
+@app.post("/api/memory/recall")
+async def recall(req: RecallRequest):
+    """检索相关记忆"""
+    if memory_store is None:
+        raise HTTPException(status_code=400, detail="Memory not initialized")
+    entries = await memory_store.recall(req.query, req.top_k)
+    return {"results": [{"id": e.id, "content": e.content, "metadata": e.metadata} for e in entries]}
+
+
+@app.post("/api/memory/recall-context")
+async def recall_context(req: RecallRequest):
+    """检索并返回可注入 prompt 的文本"""
+    if memory_store is None:
+        raise HTTPException(status_code=400, detail="Memory not initialized")
+    context = await memory_store.recall_as_context(req.query, req.top_k)
+    return {"context": context}
 
 
 # ==================== 启动入口 ====================

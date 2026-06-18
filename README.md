@@ -117,8 +117,26 @@ curl -X POST http://localhost:8000/api/workflows \
 | `read_file` | Multi-encoding file reader (txt/json/csv/md) | file |
 | `execute_sql` | Safe parameterized SQL queries (SELECT only) | database |
 | `list_tables` | Database schema inspection | database |
+| `web_search` | DuckDuckGo web search (free, no API key) | web |
 
 > Extend via plugin registry — add your own tools in minutes.
+
+## RAG Memory System
+
+```bash
+# Initialize memory
+curl -X POST http://localhost:8000/api/memory/init
+
+# Store context
+curl -X POST http://localhost:8000/api/memory/remember \
+  -H "Content-Type: application/json" \
+  -d '{"content": "The authentication module uses JWT...", "metadata": {"topic": "auth"}}'
+
+# Semantic recall
+curl -X POST http://localhost:8000/api/memory/recall \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How does login work?"}'
+```
 
 ## Tech Stack
 
@@ -137,10 +155,11 @@ curl -X POST http://localhost:8000/api/workflows \
 - [x] Tool registry & invocation
 - [x] Multi-agent workflow engine
 - [x] Spring Boot admin backend
+- [x] Web Search tool (DuckDuckGo)
+- [x] RAG memory system
 - [ ] Web UI dashboard (Vue 3)
-- [ ] More built-in tools (Web Search, Code Executor)
+- [ ] Code Executor tool
 - [ ] MCP protocol support
-- [ ] RAG memory system
 - [ ] Monitoring & alerts (Prometheus + Grafana)
 
 ## Contributing

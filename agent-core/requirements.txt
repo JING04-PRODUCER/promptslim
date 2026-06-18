@@ -10,3 +10,5 @@ openai==1.59.0
 tenacity==9.0.0
 python-dotenv==1.0.1
 loguru==0.7.3
+duckduckgo-search>=6.0.0
+numpy>=1.24.0
