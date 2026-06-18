@@ -1,78 +1,152 @@
 # AgentOrchestrator
 
-LLM Agent 编排框架，Python 写推理核心，Java 做管理后台。
+**Cross-language AI Agent orchestration platform — Python FastAPI inference core + Java Spring Boot admin panel. Build LLM agents with tool calling, multi-agent workflows, and visual management in minutes.**
 
-## 为什么做这个
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
+[![Java](https://img.shields.io/badge/java-21-orange.svg)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/spring--boot-3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Architecture](https://img.shields.io/badge/arch-cross--language-blueviolet)]()
+![Category](https://img.shields.io/badge/category-ai--agent%20|%20llm--orchestration%20|%20tool--calling-orange)
 
-现有的 Agent 框架要么绑定特定模型，要么缺少管理界面。我想把 Python 生态的 LLM 能力和 Java 生态的后台管理结合起来，两边的优势都用上。
+> 🤖 **AI Agent · LLM Orchestration · Function Calling · Multi-Agent Workflow**
 
-## 能做什么
+## Why AgentOrchestrator?
 
-- 创建 Agent，给它配工具、写 system prompt，让它执行任务
-- Agent 支持 Function Calling，自动选择合适的工具
-- 工具调用有超时控制、失败自动重试（指数退避）
-- 多个 Agent 可以串行/并行编排成工作流
-- 支持流式输出，SSE 透传
-- 对接 OpenAI 兼容协议，百炼、DeepSeek 都能用
+| Problem | Existing Solutions | This Project |
+|---------|-------------------|--------------|
+| Python is great for LLM inference, weak for enterprise management | FastAPI lacks built-in admin | FastAPI inference + Spring Boot admin |
+| Java ecosystem mature but LLM integration is fragmented | Spring AI still evolving | REST bridge to Python LLM capabilities |
+| Agent frameworks lock you into specific models | Most bind to OpenAI | OpenAI-compatible protocol — any model works |
+| Multi-agent orchestration lacks visibility | Code-only configuration | REST API with Web UI roadmap |
 
-## 跑起来
+## Architecture
 
-需要 Python 3.10+ 和 Java 17+。
+```
+┌─────────────────────────────────────────────────┐
+│           Admin Server (Spring Boot)             │
+│  Agent CRUD · Task Scheduling · Monitoring       │
+│                    port 9090                     │
+└────────────────────────┬────────────────────────┘
+                         │ REST API
+┌────────────────────────▼────────────────────────┐
+│          Agent Core (Python FastAPI)             │
+│  LLM Agent · Tool Calling · Retry · Workflow     │
+│                    port 8000                     │
+└───────┬────────────┬────────────┬───────────────┘
+        │            │            │
+   ┌────▼───┐  ┌─────▼────┐ ┌───▼───────┐
+   │ OpenAI │  │ Local    │ │ PostgreSQL│
+   │Compat. │  │ Tools    │ │  + Redis  │
+   └────────┘  └──────────┘ └───────────┘
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- Java 21+
+- Docker & Docker Compose (recommended)
+- OpenAI-compatible API key
+
+### Docker (recommended)
 
 ```bash
-# 推理核心
+git clone https://github.com/JING04-PRODUCER/agent-orchestrator.git
+cd agent-orchestrator
+cp .env.example .env  # Edit and add your OPENAI_API_KEY
+docker compose up -d
+
+# Verify
+curl http://localhost:8000/health       # Agent Core
+curl http://localhost:9090/api/admin/health  # Admin Server
+```
+
+### Local Development
+
+```bash
+# Agent Core (Python)
 cd agent-core
 pip install -r requirements.txt
-cp .env.example .env   # 填 API key
-python main.py         # 跑在 :8000
+python main.py                 # http://localhost:8000
 
-# 管理后台（可选）
+# Admin Server (Java)
 cd admin-server
-./mvnw spring-boot:run # 跑在 :9090
+./mvnw spring-boot:run         # http://localhost:9090
 ```
 
-Docker 的话直接 `docker compose up -d`。
+## Core Features
 
-## 怎么用
+### Create & Run an Agent
 
-```python
-from agent_core import Agent, Tool
+```bash
+# Create
+curl -X POST http://localhost:8000/api/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "code-reviewer",
+    "system_prompt": "You are a code review expert...",
+    "tools": ["read_file", "execute_sql"],
+    "max_iterations": 5
+  }'
 
-# 定义一个工具
-async def get_weather(city: str) -> str:
-    return f"{city}今天晴天"
-
-# 创建 Agent
-agent = Agent(
-    name="助手",
-    system_prompt="你是一个有用的助手",
-    tools=[Tool.from_function(get_weather)],
-    max_iterations=5
-)
-
-# 跑任务
-result = await agent.run("北京今天天气怎么样")
-print(result.content)
+# Execute
+curl -X POST http://localhost:8000/api/agents/code-reviewer/run \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Review app.py for security issues"}'
 ```
 
-## 项目结构
+### Multi-Agent Workflow
 
+```bash
+curl -X POST http://localhost:8000/api/workflows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agents": ["analyzer", "reviewer", "tester"],
+    "task": "Analyze code quality for this project",
+    "mode": "sequential"
+  }'
 ```
-agent-core/          # Python FastAPI 推理核心
-  agents/            # Agent 实现
-  tools/             # 工具注册中心
-  orchestration/     # 工作流编排
-admin-server/        # Java Spring Boot 管理后台
-docs/                # 文档
-```
 
-## TODO
+## Built-in Tools
 
-- [ ] Web 管理面板
-- [ ] RAG 记忆系统
-- [ ] MCP 协议支持
-- [ ] 更多内置工具
+| Tool | Description | Category |
+|------|-------------|:--------:|
+| `read_file` | Multi-encoding file reader (txt/json/csv/md) | file |
+| `execute_sql` | Safe parameterized SQL queries (SELECT only) | database |
+| `list_tables` | Database schema inspection | database |
+
+> Extend via plugin registry — add your own tools in minutes.
+
+## Tech Stack
+
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| AI Inference | Python FastAPI + OpenAI SDK | LLM calls, Function Calling |
+| Tool System | Plugin registry + asyncio | Timeout control, auto-retry |
+| Workflow | DAG orchestration + parallel scheduling | Multi-agent collaboration |
+| Admin | Java 21 + Spring Boot 3.4 | REST API, JPA |
+| Storage | PostgreSQL 16 + Redis 7 | State persistence, caching |
+| Deployment | Docker Compose | One-command startup |
+
+## Roadmap
+
+- [x] LLM Agent core (OpenAI compatible)
+- [x] Tool registry & invocation
+- [x] Multi-agent workflow engine
+- [x] Spring Boot admin backend
+- [ ] Web UI dashboard (Vue 3)
+- [ ] More built-in tools (Web Search, Code Executor)
+- [ ] MCP protocol support
+- [ ] RAG memory system
+- [ ] Monitoring & alerts (Prometheus + Grafana)
+
+## Contributing
+
+Issues and PRs welcome! See [contribution guide](docs/PLAN2-CONTRIBUTION-GUIDE.md) for getting started.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)
