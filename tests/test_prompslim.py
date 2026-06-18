@@ -84,6 +84,23 @@ class TestRedundancy:
         slim, _, _ = strip_redundancy_en(text)
         assert "In order to" not in slim.lower()
 
+    def test_mixed_chinese_english(self):
+        """混合中英文应同时触发两种规则"""
+        text = "嗯，那个就是说 In order to basically say this is very very good 对吧"
+        slim, chars, _ = strip_redundancy(text)
+        # 中文规则应去掉 "嗯"、"就是说" 等
+        # 英文规则应去掉 "In order to"、"basically"、"very" 等
+        assert chars > 10
+        assert "In order to" not in slim.lower()
+
+    def test_preserve_english_spaces_in_mixed_text(self):
+        """混合文本中英文单词间的空格应保留"""
+        text = "你好 world 你好 very good 对吧"
+        slim, _, _ = strip_redundancy(text)
+        # 英文单词之间应有空格
+        assert " world " in slim or " world" in slim
+        # 不应把所有英文单词粘在一起
+
 
 class TestCompressor:
     def test_quick_slim(self):

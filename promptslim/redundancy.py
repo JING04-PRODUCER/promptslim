@@ -63,8 +63,10 @@ ZH_CLEANUP = [
     (r"了了", "了"),
     (r"，，", "，"),
     (r"，,", "，"),
-    (r"，\s+", "，"),
-    (r"\s+", ""),
+    (r"，(?=[\u4e00-\u9fff])", "，"),
+    # 只删除 CJK 字符间的空白，保留英文单词间的空格
+    (r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", ""),
+    (r"(?<=[\u4e00-\u9fff])\s+(?=[，。！？、；：""''）】》])", ""),
 ]
 
 
@@ -94,8 +96,21 @@ def strip_redundancy_zh(text: str) -> tuple[str, int, int]:
 
 
 def strip_redundancy(text: str) -> tuple[str, int, int]:
-    """自动检测语言并移除冗余，返回 (处理后文本, 移除字符数, 移除词数)"""
+    """自动检测语言并移除冗余，返回 (处理后文本, 移除字符数, 移除词数)
+
+    混合中英文时按序处理：先中文后英文，确保两种规则都生效。
+    """
+    if not text:
+        return text, 0, 0
     zh_count = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
-    if zh_count > len(text) * 0.3:
+    zh_ratio = zh_count / len(text)
+
+    # 混合文本 (10% ~ 90% 中文)：先中文规则再英文规则
+    if 0.1 < zh_ratio < 0.9:
+        t1, c1, w1 = strip_redundancy_zh(text)
+        t2, c2, w2 = strip_redundancy_en(t1)
+        return t2, c1 + c2, w1 + w2
+    elif zh_ratio >= 0.9:
         return strip_redundancy_zh(text)
-    return strip_redundancy_en(text)
+    else:
+        return strip_redundancy_en(text)

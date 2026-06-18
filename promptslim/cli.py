@@ -162,13 +162,13 @@ def _print_report(report):
     pct = d["savings_pct"]
     if pct > 20:
         color = "green"
-        emoji = "🎉"
+        emoji = "[Great!]"
     elif pct > 5:
         color = "yellow"
-        emoji = "👍"
+        emoji = "[OK]"
     else:
         color = "dim"
-        emoji = "💡"
+        emoji = "[Tip]"
 
     msg = Text(f"\n{emoji} Token 节省 {pct}%，每次调用节省约 ${d['cost_per_call_saved_usd']:.6f}")
     msg.stylize(color)
