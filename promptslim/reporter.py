@@ -24,9 +24,9 @@ MODEL_COST_PER_TOKEN = {
 
 
 class SlimReport:
-    """瘦身报告"""
+    """瘦身报告，可选附带缓存分析"""
 
-    def __init__(self, original: str, slimmed: str, model: str):
+    def __init__(self, original: str, slimmed: str, model: str, cache_analysis=None):
         from .tokenizer import count_tokens
 
         self.model = model
@@ -48,8 +48,11 @@ class SlimReport:
         cost = MODEL_COST_PER_TOKEN.get(model, MODEL_COST_PER_TOKEN["default"])
         self.cost_per_call_saved = round(self.tokens_saved * cost["input"], 6)
 
+        # 缓存分析 (可选)
+        self.cache = cache_analysis
+
     def to_dict(self) -> dict:
-        return {
+        d = {
             "model": self.model,
             "original_chars": self.original_len,
             "slimmed_chars": self.slimmed_len,
@@ -59,3 +62,9 @@ class SlimReport:
             "savings_pct": self.savings_pct,
             "cost_per_call_saved_usd": self.cost_per_call_saved,
         }
+        if self.cache is not None:
+            d["cache"] = self.cache.to_dict()
+            d["total_savings_with_cache_usd"] = round(
+                self.cost_per_call_saved + self.cache.savings_per_cached_call, 6
+            )
+        return d

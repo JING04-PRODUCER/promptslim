@@ -21,6 +21,7 @@ def _build_parser():
     c.add_argument("input", help="文本内容 / 文件路径（用 file: 前缀）")
     c.add_argument("-m", "--model", default="gpt-4o", help="模型名称（默认 gpt-4o）")
     c.add_argument("--json", action="store_true", help="JSON 格式输出")
+    c.add_argument("--cache", metavar="MESSAGES_JSON", help="分析 Prompt Caching 节省潜力（传入 messages JSON 文件路径）")
 
     # === slim ===
     s = sub.add_parser("slim", help="快速去冗余瘦身")
@@ -28,6 +29,7 @@ def _build_parser():
     s.add_argument("-m", "--model", default="gpt-4o", help="模型名称（默认 gpt-4o）")
     s.add_argument("-o", "--output", help="输出文件路径")
     s.add_argument("--json", action="store_true", help="JSON 格式输出")
+    s.add_argument("--cache", metavar="MESSAGES_JSON", help="附加 Prompt Caching 节省分析（传入 messages JSON 文件路径）")
 
     # === smart ===
     sm = sub.add_parser("smart", help="调用 LLM 智能压缩（需 API Key）")
@@ -69,8 +71,23 @@ def cmd_count(args):
     tokens = count_tokens(text, args.model)
     cost = cost_estimate(text, args.model)
 
+    # 缓存分析
+    cache_data = None
+    if args.cache:
+        import json as _json
+        try:
+            messages = _json.loads(Path(args.cache).read_text(encoding="utf-8"))
+            from .cache import analyze_messages
+            cache_data = analyze_messages(messages, args.model)
+        except Exception as e:
+            from rich.console import Console
+            Console().print(f"[yellow]缓存分析失败: {e}[/]")
+
     if args.json:
-        print(json.dumps({"tokens": tokens, "estimated_cost_usd": cost, "model": args.model}, ensure_ascii=False))
+        out = {"tokens": tokens, "estimated_cost_usd": cost, "model": args.model}
+        if cache_data:
+            out["cache"] = cache_data.to_dict()
+        print(json.dumps(out, ensure_ascii=False))
     else:
         from rich.console import Console
         from rich.table import Table
@@ -83,12 +100,26 @@ def cmd_count(args):
         t.add_row("估算费用 (输入)", f"${cost:.6f}")
         c.print(t)
 
+        if cache_data:
+            _print_cache_table(cache_data)
+
 
 def cmd_slim(args):
     from .compressor import quick_slim
 
     text = _read_input(args.input)
-    report = quick_slim(text, args.model)
+
+    # 缓存分析
+    cache_messages = None
+    if args.cache:
+        import json as _json
+        try:
+            cache_messages = _json.loads(Path(args.cache).read_text(encoding="utf-8"))
+        except Exception as e:
+            from rich.console import Console
+            Console().print(f"[yellow]缓存分析失败: {e}[/]")
+
+    report = quick_slim(text, args.model, cache_messages=cache_messages)
 
     if args.output:
         Path(args.output).write_text(report.slimmed, encoding="utf-8")
@@ -176,6 +207,38 @@ def _print_report(report):
 
     if pct <= 5:
         c.print("[dim]提示：试试 smart 模式，用 LLM 做更激进的压缩[/]")
+
+    # 缓存分析
+    if report.cache is not None:
+        _print_cache_table(report.cache)
+
+
+def _print_cache_table(cache_analysis):
+    from rich.console import Console
+    from rich.table import Table
+    from .cache import CACHE_WRITE_MULTIPLIER, CACHE_READ_MULTIPLIER, CACHE_TTL_SECONDS
+
+    d = cache_analysis.to_dict()
+    c = Console()
+
+    t = Table(title="Prompt Caching 缓存分析")
+    t.add_column("指标", style="cyan")
+    t.add_column("值", style="green")
+    t.add_row("可缓存 Token", f"{d['cacheable_tokens']} / {d['total_tokens']} ({round(d['cacheable_tokens']/d['total_tokens']*100, 1) if d['total_tokens'] > 0 else 0}%)")
+    t.add_row("缓存块数", str(d["cacheable_blocks"]))
+    t.add_row("断点使用", f"{d['breakpoints_used']} / 4")
+    t.add_row("无缓存费用", f"${d['cost_without_cache_usd']:.6f}")
+    t.add_row("首次写入费用", f"${d['cost_first_call_usd']:.6f} (×{CACHE_WRITE_MULTIPLIER})")
+    t.add_row("缓存命中费用", f"${d['cost_cached_call_usd']:.6f} (×{CACHE_READ_MULTIPLIER})")
+    t.add_row("每次命中节省", f"${d['savings_per_cached_call_usd']:.6f}")
+    t.add_row("缓存 TTL", f"{CACHE_TTL_SECONDS}s (5 分钟)")
+    c.print(t)
+
+    savings_pct = cache_analysis.savings_pct_per_call()
+    if savings_pct > 0:
+        c.print(f"\n[green]缓存命中后可再节省 {savings_pct}% input 费用[/]")
+    else:
+        c.print("\n[dim]当前消息无可缓存部分（system prompt 需 >1024 tokens）[/]")
 
 
 def main():

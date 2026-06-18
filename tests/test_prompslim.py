@@ -124,6 +124,107 @@ class TestCompressor:
         assert report.savings_pct == 0.0
 
 
+# 用于缓存测试的长文本 (~4600 tokens with cl100k)
+_LONG_SYSTEM = ("You are a highly knowledgeable AI assistant with deep expertise across many technical domains "
+                "including software engineering, data science, mathematics, and system design. ") * 350
+
+
+class TestCache:
+    def test_analyze_simple_messages(self):
+        from promptslim.cache import analyze_messages
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "Hello"},
+        ]
+        analysis = analyze_messages(messages, "claude-opus-4-7")
+        assert analysis.total_tokens > 0
+        assert analysis.cacheable_tokens > 0
+        assert analysis.cacheable_tokens < analysis.total_tokens
+        assert analysis.breakpoints_used >= 1
+
+    def test_analyze_no_cacheable(self):
+        from promptslim.cache import analyze_messages
+        messages = [
+            {"role": "user", "content": "hi"},
+        ]
+        analysis = analyze_messages(messages)
+        assert analysis.cacheable_tokens == 0
+        assert analysis.savings_per_cached_call == 0
+
+    def test_cache_analysis_to_dict(self):
+        from promptslim.cache import analyze_messages
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "Hello"},
+        ]
+        d = analyze_messages(messages, "gpt-4o").to_dict()
+        assert "cacheable_tokens" in d
+        assert "savings_per_cached_call_usd" in d
+        assert "ttl_seconds" in d
+
+    def test_estimate_cache_savings(self):
+        from promptslim.cache import estimate_cache_savings
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "What is 2+2?"},
+        ]
+        result = estimate_cache_savings(messages, "claude-opus-4-7", calls_per_window=5)
+        assert result["calls_per_window"] == 5
+        assert result["total_savings_in_window_usd"] >= 0
+
+    def test_build_cached_messages(self):
+        from promptslim.cache import build_cached_messages
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "Hello"},
+        ]
+        cached, analysis = build_cached_messages(messages)
+        assert len(cached) == 2
+        system_content = cached[0]["content"]
+        assert isinstance(system_content, list)
+        assert "cache_control" in system_content[0]
+
+    def test_slimreport_with_cache(self):
+        from promptslim import quick_slim
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "Review this code."},
+        ]
+        text = "\n".join(m["content"] for m in messages)
+        report = quick_slim(text, "claude-opus-4-7", cache_messages=messages)
+        d = report.to_dict()
+        assert "cache" in d
+        assert "total_savings_with_cache_usd" in d
+
+    def test_savings_over_n_calls(self):
+        from promptslim.cache import analyze_messages
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "Hello"},
+        ]
+        analysis = analyze_messages(messages, "claude-opus-4-7")
+        s1 = analysis.savings_over_n_calls(1)
+        s10 = analysis.savings_over_n_calls(10)
+        assert s1 == 0.0
+        assert s10 > 0
+
+    def test_empty_messages(self):
+        from promptslim.cache import analyze_messages
+        analysis = analyze_messages([])
+        assert analysis.total_tokens == 0
+        assert analysis.cacheable_tokens == 0
+
+    def test_savings_pct_calculation(self):
+        from promptslim.cache import analyze_messages
+        messages = [
+            {"role": "system", "content": _LONG_SYSTEM},
+            {"role": "user", "content": "Hello"},
+        ]
+        analysis = analyze_messages(messages, "claude-opus-4-7")
+        pct = analysis.savings_pct_per_call()
+        assert 0 < pct < 100
+
+
 class TestReporter:
     def test_slim_report(self):
         report = SlimReport("hello world", "hello", "gpt-4o")

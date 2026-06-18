@@ -6,10 +6,24 @@ from .redundancy import strip_redundancy
 from .reporter import SlimReport
 
 
-def quick_slim(text: str, model: str = "gpt-4o") -> SlimReport:
-    """快速瘦身：仅规则去冗余，离线执行无需 API"""
+def quick_slim(
+    text: str,
+    model: str = "gpt-4o",
+    cache_messages: list[dict] | None = None,
+) -> SlimReport:
+    """快速瘦身：仅规则去冗余，离线执行无需 API
+
+    Args:
+        text: 待瘦身文本
+        model: 模型名
+        cache_messages: 可选的消息列表，用于分析缓存节省潜力
+    """
     slimmed, _, _ = strip_redundancy(text)
-    return SlimReport(text, slimmed, model)
+    cache_analysis = None
+    if cache_messages is not None:
+        from .cache import analyze_messages
+        cache_analysis = analyze_messages(cache_messages, model)
+    return SlimReport(text, slimmed, model, cache_analysis=cache_analysis)
 
 
 def smart_slim(
