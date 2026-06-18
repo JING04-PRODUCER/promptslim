@@ -5,7 +5,7 @@
 [🌐 English](README.md) | [中文](README_zh.md)
 
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
-[![Java](https://img.shields.io/badge/java-21-orange.svg)](https://adoptium.net/)
+[![Java](https://img.shields.io/badge/java-17-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/spring--boot-3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -22,6 +22,18 @@
 | Java ecosystem mature but LLM integration is fragmented | Spring AI still evolving | REST bridge to Python LLM capabilities |
 | Agent frameworks lock you into specific models | Most bind to OpenAI | OpenAI-compatible protocol — any model works |
 | Multi-agent orchestration lacks visibility | Code-only configuration | REST API with Web UI roadmap |
+
+## Why AgentOrchestrator?
+
+| Need | LangGraph | CrewAI | AgentOrchestrator |
+|------|-----------|--------|-------------------|
+| Python LLM inference | ✅ | ✅ | ✅ |
+| Enterprise admin (RBAC, audit) | ❌ | ❌ | ✅ Spring Boot |
+| Java ecosystem integration | ❌ | ❌ | ✅ |
+| Visual workflow management | ❌ | ❌ | ✅ Roadmap |
+| Multi-agent DAG workflow | ✅ | ✅ | ✅ |
+| Tool plugin registry | ✅ | ✅ | ✅ |
+| RAG memory system | ✅ | ✅ | ✅ |
 
 ## Architecture
 
