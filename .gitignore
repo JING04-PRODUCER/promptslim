@@ -12,3 +12,4 @@ venv/
 secrets/**
 target/
 chroma_data/
+agent-orchestrator/
