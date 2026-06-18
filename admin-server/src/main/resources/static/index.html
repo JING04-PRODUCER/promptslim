@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentOrchestrator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        surface: '#1e1e2e',
+        'surface-light': '#2a2a3c',
+        'surface-lighter': '#363650',
+        accent: '#a78bfa',
+        green: '#34d399',
+        red: '#f87171',
+        yellow: '#fbbf24',
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { background: #14141f; color: #cdd6f4; font-family: 'Segoe UI', system-ui, sans-serif; }
+  .card { background: #1e1e2e; border: 1px solid #363650; border-radius: 8px; }
+  input, textarea, select { background: #1a1a2e; color: #cdd6f4; border: 1px solid #363650; border-radius: 6px; padding: 8px 12px; }
+  input:focus, textarea:focus, select:focus { border-color: #a78bfa; outline: none; }
+  .btn-primary { background: #a78bfa; color: white; border-radius: 6px; padding: 8px 16px; font-weight: 600; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary { background: #363650; color: #cdd6f4; border-radius: 6px; padding: 8px 16px; transition: opacity 0.15s; }
+  .btn-secondary:hover { opacity: 0.8; }
+  .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; }
+  .tab-btn { padding: 8px 16px; border-radius: 6px 6px 0 0; cursor: pointer; transition: all 0.15s; }
+  .tab-btn.active { background: #1e1e2e; color: #a78bfa; border-bottom: 2px solid #a78bfa; }
+  .tab-btn:not(.active) { color: #8b949e; }
+  .tab-btn:not(.active):hover { color: #cdd6f4; }
+  .dag-node { display: inline-block; padding: 8px 16px; border-radius: 8px; border: 2px solid #363650; background: #1a1a2e; cursor: pointer; transition: all 0.2s; }
+  .dag-node:hover { border-color: #a78bfa; }
+  .dag-node.running { border-color: #fbbf24; animation: pulse 1.5s infinite; }
+  .dag-node.done { border-color: #34d399; }
+  .dag-line { width: 2px; height: 24px; background: #363650; margin: 0 auto; }
+  .dag-arrow { border-left: 6px solid #363650; border-top: 6px solid transparent; border-bottom: 6px solid transparent; height: 0; width: 0; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .toast { animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  pre { white-space: pre-wrap; word-break: break-all; }
+  .scrollbar::-webkit-scrollbar { width: 6px; }
+  .scrollbar::-webkit-scrollbar-thumb { background: #363650; border-radius: 3px; }
+</style>
+</head>
+<body class="dark">
+<div id="app">
+  <!-- Top Nav -->
+  <nav class="bg-surface border-b border-gray-700 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-accent rounded-lg flex items-center justify-center text-white font-bold">AO</div>
+      <span class="font-bold text-lg">AgentOrchestrator</span>
+      <span class="text-xs text-gray-400 ml-2">v0.1.0</span>
+    </div>
+    <div class="flex items-center gap-3 text-sm">
+      <span :class="['w-2 h-2 rounded-full', coreOnline ? 'bg-green' : 'bg-red']"></span>
+      <span class="text-gray-400">{{ coreOnline ? 'Agent Core Online' : 'Agent Core Offline' }}</span>
+      <span class="text-gray-600">|</span>
+      <span :class="['w-2 h-2 rounded-full', adminOnline ? 'bg-green' : 'bg-red']"></span>
+      <span class="text-gray-400">{{ adminOnline ? 'Admin Online' : 'Admin Offline' }}</span>
+    </div>
+  </nav>
+
+  <!-- Tabs -->
+  <div class="bg-surface border-b border-gray-700 px-6 flex gap-1">
+    <div v-for="tab in tabs" :key="tab.id" :class="['tab-btn text-sm', activeTab === tab.id ? 'active' : '']" @click="activeTab = tab.id">
+      <i :class="tab.icon + ' mr-1'"></i>{{ tab.label }}
+    </div>
+  </div>
+
+  <!-- Content -->
+  <main class="p-6 max-w-7xl mx-auto">
+
+    <!-- ===== Dashboard ===== -->
+    <div v-if="activeTab === 'dashboard'" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="card p-4">
+          <div class="text-xs text-gray-400 uppercase">Agents</div>
+          <div class="text-2xl font-bold mt-1">{{ stats.agents }}</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-gray-400 uppercase">Tools Registered</div>
+          <div class="text-2xl font-bold mt-1">{{ stats.tools }}</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-gray-400 uppercase">Workflows</div>
+          <div class="text-2xl font-bold mt-1">{{ stats.workflows }}</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-gray-400 uppercase">API Status</div>
+          <div class="text-2xl font-bold mt-1 text-green">Online</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <h3 class="font-semibold mb-3"><i class="fa fa-cubes text-accent mr-1"></i>Agent Core Endpoints</h3>
+          <div class="space-y-1 text-sm font-mono">
+            <div class="flex justify-between p-2 bg-surface-light rounded"><span>GET /health</span><span class="text-green">active</span></div>
+            <div class="flex justify-between p-2 bg-surface-light rounded"><span>GET /api/agents</span><span class="text-gray-400">agent list</span></div>
+            <div class="flex justify-between p-2 bg-surface-light rounded"><span>POST /api/agents</span><span class="text-gray-400">create agent</span></div>
+            <div class="flex justify-between p-2 bg-surface-light rounded"><span>POST /api/agents/:name/run</span><span class="text-gray-400">execute agent</span></div>
+            <div class="flex justify-between p-2 bg-surface-light rounded"><span>POST /api/workflows</span><span class="text-gray-400">run workflow</span></div>
+            <div class="flex justify-between p-2 bg-surface-light rounded"><span>GET /api/tools</span><span class="text-gray-400">list tools</span></div>
+          </div>
+        </div>
+        <div class="card p-4">
+          <h3 class="font-semibold mb-3"><i class="fa fa-server text-accent mr-1"></i>Quick Actions</h3>
+          <div class="space-y-2">
+            <button class="btn-primary w-full text-left" @click="activeTab='agents'; newAgent()"><i class="fa fa-plus mr-2"></i>Create New Agent</button>
+            <button class="btn-secondary w-full text-left" @click="activeTab='workflows'"><i class="fa fa-sitemap mr-2"></i>Build Workflow</button>
+            <button class="btn-secondary w-full text-left" @click="activeTab='tools'"><i class="fa fa-wrench mr-2"></i>Browse Tools</button>
+            <button class="btn-secondary w-full text-left" @click="fetchAll()"><i class="fa fa-refresh mr-2"></i>Refresh Status</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Agents ===== -->
+    <div v-if="activeTab === 'agents'" class="space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold"><i class="fa fa-android text-accent mr-2"></i>Agents</h2>
+        <button class="btn-primary" @click="newAgent()"><i class="fa fa-plus mr-1"></i>New Agent</button>
+      </div>
+
+      <!-- Agent Form Modal -->
+      <div v-if="showAgentForm" class="card p-4 space-y-3">
+        <h3 class="font-semibold">{{ editingAgent ? 'Edit Agent' : 'Create Agent' }}</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-400">Name</label>
+            <input v-model="agentForm.name" class="w-full" placeholder="my-agent">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400">Model</label>
+            <input v-model="agentForm.model" class="w-full" placeholder="gpt-4o">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">System Prompt</label>
+          <textarea v-model="agentForm.system_prompt" class="w-full h-20" placeholder="You are a helpful assistant..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-400">Tools (comma-separated)</label>
+            <input v-model="agentForm.tools_str" class="w-full" placeholder="read_file, web_search">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400">Max Iterations</label>
+            <input v-model.number="agentForm.max_iterations" type="number" class="w-full" min="1" max="20">
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-primary" @click="saveAgent()"><i class="fa fa-save mr-1"></i>Save</button>
+          <button class="btn-secondary" @click="showAgentForm = false">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Agent List -->
+      <div v-if="agents.length === 0" class="card p-8 text-center text-gray-400">
+        <i class="fa fa-inbox text-3xl mb-3 block"></i>
+        No agents yet. Create one to get started.
+      </div>
+      <div v-for="agent in agents" :key="agent.name" class="card p-4 hover:border-accent transition cursor-pointer" @click="selectAgent(agent)">
+        <div class="flex justify-between items-start">
+          <div>
+            <h3 class="font-bold text-lg">{{ agent.name }}</h3>
+            <p class="text-sm text-gray-400 mt-1">{{ agent.system_prompt }}</p>
+            <div class="flex gap-2 mt-2">
+              <span class="badge bg-surface-light text-xs font-mono">{{ agent.model || 'gpt-4o' }}</span>
+              <span v-for="t in (agent.tools || [])" :key="t" class="badge bg-accent bg-opacity-20 text-accent text-xs">{{ t }}</span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn-primary text-sm" @click.stop="runAgent(agent)"><i class="fa fa-play mr-1"></i>Run</button>
+            <button class="btn-secondary text-sm" @click.stop="deleteAgent(agent.name)"><i class="fa fa-trash"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Run Dialog -->
+      <div v-if="showRunDialog" class="card p-4 space-y-3">
+        <h3 class="font-semibold">Run: {{ runTarget.name }}</h3>
+        <div>
+          <label class="text-xs text-gray-400">Task Description</label>
+          <textarea v-model="runTask" class="w-full h-24" placeholder="Describe the task..."></textarea>
+        </div>
+        <div v-if="runResult" class="bg-surface-light p-4 rounded-lg max-h-48 overflow-auto scrollbar">
+          <pre class="text-sm font-mono">{{ JSON.stringify(runResult, null, 2) }}</pre>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-primary" @click="executeRun()" :disabled="running">
+            <i :class="running ? 'fa fa-spinner fa-spin' : 'fa fa-play' + ' mr-1'"></i>
+            {{ running ? 'Running...' : 'Execute' }}
+          </button>
+          <button class="btn-secondary" @click="showRunDialog = false">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Workflows ===== -->
+    <div v-if="activeTab === 'workflows'" class="space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold"><i class="fa fa-sitemap text-accent mr-2"></i>Workflows</h2>
+        <button class="btn-primary" @click="showWorkflowForm = !showWorkflowForm">
+          <i class="fa fa-plus mr-1"></i>New Workflow
+        </button>
+      </div>
+
+      <!-- Workflow Form -->
+      <div v-if="showWorkflowForm" class="card p-4 space-y-3">
+        <h3 class="font-semibold">Create Workflow</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-400">Mode</label>
+            <select v-model="wfForm.mode" class="w-full">
+              <option value="sequential">Sequential</option>
+              <option value="parallel">Parallel</option>
+              <option value="dag">DAG (with dependencies)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400">Task</label>
+            <input v-model="wfForm.task" class="w-full" placeholder="What should the workflow do?">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">Agents (comma-separated)</label>
+          <input v-model="wfForm.agents_str" class="w-full" placeholder="analyzer, reviewer, tester">
+        </div>
+        <!-- DAG Visualization -->
+        <div v-if="wfForm.mode === 'dag'" class="bg-surface-light p-4 rounded-lg">
+          <div class="text-xs text-gray-400 mb-2">DAG Preview (dependencies inferred from order)</div>
+          <div class="flex flex-col items-center gap-0">
+            <template v-for="(name, i) in wfForm.agents_str.split(',').map(s => s.trim()).filter(Boolean)" :key="name">
+              <div class="dag-node">{{ name }}</div>
+              <div v-if="i < wfForm.agents_str.split(',').filter(Boolean).length - 1" class="flex flex-col items-center">
+                <div class="dag-line"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-primary" @click="submitWorkflow()"><i class="fa fa-play mr-1"></i>Run Workflow</button>
+          <button class="btn-secondary" @click="showWorkflowForm = false">Cancel</button>
+        </div>
+        <div v-if="wfResult" class="bg-surface-light p-4 rounded-lg max-h-48 overflow-auto scrollbar">
+          <pre class="text-sm font-mono">{{ JSON.stringify(wfResult, null, 2) }}</pre>
+        </div>
+      </div>
+
+      <div v-if="!showWorkflowForm" class="card p-8 text-center text-gray-400">
+        <i class="fa fa-sitemap text-4xl mb-3 block"></i>
+        Build multi-agent workflows with DAG dependency support.
+      </div>
+    </div>
+
+    <!-- ===== Tools ===== -->
+    <div v-if="activeTab === 'tools'" class="space-y-4">
+      <h2 class="text-xl font-bold"><i class="fa fa-wrench text-accent mr-2"></i>Tools Registry</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="tool in tools" :key="tool.name" class="card p-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 class="font-bold font-mono text-accent">{{ tool.name }}</h3>
+              <p class="text-sm text-gray-400 mt-1">{{ tool.description }}</p>
+            </div>
+            <span :class="['badge text-xs', tool.category === 'file' ? 'bg-yellow bg-opacity-20 text-yellow' : tool.category === 'database' ? 'bg-red bg-opacity-20 text-red' : 'bg-accent bg-opacity-20 text-accent']">{{ tool.category }}</span>
+          </div>
+          <div v-if="tool.parameters && tool.parameters.length" class="mt-3">
+            <div class="text-xs text-gray-400 mb-1">Parameters:</div>
+            <div v-for="p in tool.parameters" :key="p.name" class="flex items-center gap-2 text-sm ml-2">
+              <span class="font-mono text-gray-300">{{ p.name }}</span>
+              <span class="text-gray-500">({{ p.type }})</span>
+              <span v-if="p.required" class="badge bg-red bg-opacity-20 text-red text-xs">required</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="tools.length === 0" class="card p-8 text-center text-gray-400">
+        <i class="fa fa-wrench text-3xl mb-3 block"></i>
+        No tools registered. Start agent-core to load tools.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast -->
+  <div v-if="toast" :class="['toast fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-semibold', toastType === 'error' ? 'bg-red text-white' : 'bg-green text-black']">
+    {{ toast }}
+  </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const tabs = [
+      { id: 'dashboard', label: 'Dashboard', icon: 'fa fa-dashboard' },
+      { id: 'agents', label: 'Agents', icon: 'fa fa-android' },
+      { id: 'workflows', label: 'Workflows', icon: 'fa fa-sitemap' },
+      { id: 'tools', label: 'Tools', icon: 'fa fa-wrench' },
+    ];
+    const activeTab = ref('dashboard');
+    const coreOnline = ref(false);
+    const adminOnline = ref(true);
+    const toast = ref('');
+    const toastType = ref('success');
+
+    // Stats
+    const stats = reactive({ agents: 0, tools: 0, workflows: 0 });
+
+    // Agents
+    const agents = ref([]);
+    const showAgentForm = ref(false);
+    const editingAgent = ref(null);
+    const agentForm = reactive({ name: '', model: 'gpt-4o', system_prompt: '', tools_str: '', max_iterations: 5 });
+    const showRunDialog = ref(false);
+    const runTarget = ref(null);
+    const runTask = ref('');
+    const runResult = ref(null);
+    const running = ref(false);
+
+    // Workflows
+    const showWorkflowForm = ref(false);
+    const wfForm = reactive({ mode: 'sequential', task: '', agents_str: '' });
+    const wfResult = ref(null);
+
+    // Tools
+    const tools = ref([]);
+
+    // API helpers
+    const coreUrl = 'http://localhost:8000';
+    const adminUrl = '';
+
+    async function apiGet(path, fallback) {
+      try {
+        const resp = await fetch(coreUrl + path, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return await resp.json();
+      } catch (e) {
+        if (fallback !== undefined) return fallback;
+        throw e;
+      }
+    }
+
+    async function apiPost(path, body) {
+      const resp = await fetch(coreUrl + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      return await resp.json();
+    }
+
+    async function apiDelete(path) {
+      await fetch(coreUrl + path, { method: 'DELETE' });
+    }
+
+    function showToast(msg, type = 'success') {
+      toast.value = msg;
+      toastType.value = type;
+      setTimeout(() => toast.value = '', 3000);
+    }
+
+    // Fetch all data
+    async function fetchAll() {
+      try {
+        // Health check
+        const health = await apiGet('/health', null);
+        coreOnline.value = health && health.status === 'ok';
+
+        // Agents
+        const agentList = await apiGet('/api/agents', []);
+        agents.value = Array.isArray(agentList) ? agentList : (agentList.agents || []);
+        stats.agents = agents.value.length;
+
+        // Tools
+        const toolList = await apiGet('/api/tools', []);
+        tools.value = Array.isArray(toolList) ? toolList : (toolList.tools || []);
+        stats.tools = tools.value.length;
+
+        stats.workflows = 0; // No workflow list endpoint yet
+      } catch (e) {
+        coreOnline.value = false;
+        console.log('Core unavailable:', e.message);
+      }
+    }
+
+    // Agent CRUD
+    function newAgent() {
+      editingAgent.value = null;
+      agentForm.name = '';
+      agentForm.model = 'gpt-4o';
+      agentForm.system_prompt = '';
+      agentForm.tools_str = '';
+      agentForm.max_iterations = 5;
+      showAgentForm.value = true;
+    }
+
+    async function saveAgent() {
+      try {
+        const tools = agentForm.tools_str.split(',').map(s => s.trim()).filter(Boolean);
+        const body = {
+          name: agentForm.name,
+          model: agentForm.model,
+          system_prompt: agentForm.system_prompt,
+          tools: tools,
+          max_iterations: agentForm.max_iterations,
+        };
+        await apiPost('/api/agents', body);
+        showAgentForm.value = false;
+        showToast('Agent created: ' + agentForm.name);
+        fetchAll();
+      } catch (e) {
+        showToast('Failed: ' + e.message, 'error');
+      }
+    }
+
+    function selectAgent(agent) {
+      editingAgent.value = agent;
+      agentForm.name = agent.name;
+      agentForm.model = agent.model || 'gpt-4o';
+      agentForm.system_prompt = agent.system_prompt || '';
+      agentForm.tools_str = (agent.tools || []).join(', ');
+      agentForm.max_iterations = agent.max_iterations || 5;
+      showAgentForm.value = true;
+    }
+
+    async function deleteAgent(name) {
+      if (!confirm('Delete agent "' + name + '"?')) return;
+      try {
+        await apiDelete('/api/agents/' + name);
+        showToast('Agent deleted: ' + name);
+        fetchAll();
+      } catch (e) {
+        showToast('Failed: ' + e.message, 'error');
+      }
+    }
+
+    function runAgent(agent) {
+      runTarget.value = agent;
+      runTask.value = '';
+      runResult.value = null;
+      showRunDialog.value = true;
+    }
+
+    async function executeRun() {
+      running.value = true;
+      runResult.value = null;
+      try {
+        const result = await apiPost('/api/agents/' + runTarget.value.name + '/run', { task: runTask.value });
+        runResult.value = result;
+        showToast('Execution complete');
+      } catch (e) {
+        runResult.value = { error: e.message };
+        showToast('Execution failed: ' + e.message, 'error');
+      }
+      running.value = false;
+    }
+
+    // Workflow
+    async function submitWorkflow() {
+      const agents = wfForm.agents_str.split(',').map(s => s.trim()).filter(Boolean);
+      try {
+        const result = await apiPost('/api/workflows', {
+          agents: agents,
+          task: wfForm.task,
+          mode: wfForm.mode,
+        });
+        wfResult.value = result;
+        showToast('Workflow complete');
+      } catch (e) {
+        wfResult.value = { error: e.message };
+        showToast('Workflow failed: ' + e.message, 'error');
+      }
+    }
+
+    onMounted(() => {
+      fetchAll();
+      setInterval(fetchAll, 30000); // Refresh every 30s
+    });
+
+    return {
+      tabs, activeTab, coreOnline, adminOnline, toast, toastType,
+      stats, agents, showAgentForm, editingAgent, agentForm,
+      showRunDialog, runTarget, runTask, runResult, running,
+      showWorkflowForm, wfForm, wfResult, tools,
+      fetchAll, newAgent, saveAgent, selectAgent, deleteAgent, runAgent, executeRun, submitWorkflow,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
