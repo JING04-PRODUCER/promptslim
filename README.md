@@ -10,6 +10,8 @@
 
 > 🎯 **Token Optimization · Cost Saving · Prompt Engineering · LLM Tools**
 
+> 📖 **掘金详解 v0.3.0：** [给你的 AI 提示词剃得再干净一点](https://juejin.cn/post/7652277909156790272)
+
 ## What Problem Does This Solve?
 
 Every word you send to an LLM costs money. Filler words, redundant phrases, and polite fluff silently drain your budget. Most developers don't realize 5-40% of their token spend is waste.
