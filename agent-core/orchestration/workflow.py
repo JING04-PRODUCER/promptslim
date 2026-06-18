@@ -18,6 +18,13 @@ class WorkflowStep:
     step_name: str = ""
 
 
+class WorkflowError(Exception):
+    """工作流执行异常"""
+    def __init__(self, message: str, errors: list[dict] | None = None):
+        super().__init__(message)
+        self.errors = errors or []
+
+
 class WorkflowEngine:
     """支持 DAG 依赖的工作流编排引擎"""
 
@@ -25,6 +32,35 @@ class WorkflowEngine:
         settings = get_settings()
         self.max_concurrent = settings.max_concurrent_agents
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
+
+    def _detect_cycle(self, steps: list[WorkflowStep]) -> bool:
+        """使用 DFS 三色标记法检测有向图中的环"""
+        graph = {}
+        all_nodes = set()
+        for s in steps:
+            graph[s.step_name] = set(s.depends_on)
+            all_nodes.add(s.step_name)
+            all_nodes.update(s.depends_on)
+
+        WHITE, GRAY, BLACK = 0, 1, 2
+        color = {node: WHITE for node in all_nodes}
+
+        def dfs(node: str) -> bool:
+            if node not in color:
+                return False
+            color[node] = GRAY
+            for neighbor in graph.get(node, set()):
+                if color.get(neighbor, BLACK) == GRAY:
+                    return True
+                if color.get(neighbor, WHITE) == WHITE and dfs(neighbor):
+                    return True
+            color[node] = BLACK
+            return False
+
+        for node in all_nodes:
+            if color.get(node, WHITE) == WHITE and dfs(node):
+                return True
+        return False
 
     async def run_sequential(self, agents: list[BaseAgent], task: str) -> list[dict]:
         """顺序执行多个 Agent"""
@@ -38,16 +74,33 @@ class WorkflowEngine:
         return results
 
     async def run_parallel(self, agents: list[BaseAgent], task: str) -> list[dict]:
-        """并行执行多个 Agent（独立任务）"""
-        async def _run_one(agent: BaseAgent):
-            async with self.semaphore:
-                result = await agent.run(task)
-                return {"agent": agent.config.name, "result": result}
+        """并行执行多个 Agent（独立任务），失败不中断其他 Agent"""
+        results = []
+        errors = []
 
-        return await asyncio.gather(*[_run_one(a) for a in agents])
+        async def _run_one(agent: BaseAgent):
+            try:
+                async with self.semaphore:
+                    result = await agent.run(task)
+                    results.append({"step": agent.config.name, "status": "success", "output": result})
+            except Exception as e:
+                errors.append({"step": agent.config.name, "error": str(e)})
+                results.append({"step": agent.config.name, "status": "failed", "error": str(e)})
+
+        await asyncio.gather(*[_run_one(a) for a in agents])
+
+        if errors:
+            raise WorkflowError(
+                f"Parallel execution: {len(errors)}/{len(agents)} steps failed",
+                errors=errors
+            )
+        return results
 
     async def run_dag(self, steps: list[WorkflowStep], initial_task: str) -> dict[str, dict]:
         """按 DAG 依赖执行工作流"""
+        if self._detect_cycle(steps):
+            raise WorkflowError("DAG contains a cycle, cannot execute")
+
         results: dict[str, dict] = {}
         running: dict[str, asyncio.Task] = {}
 
@@ -61,7 +114,7 @@ class WorkflowEngine:
             ]
 
             if not ready and not running:
-                raise RuntimeError("Workflow deadlock: unresolved dependencies")
+                raise WorkflowError("Workflow deadlock: unresolved dependencies")
 
             # 并行执行就绪步骤
             async def _execute_step(step: WorkflowStep):

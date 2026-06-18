@@ -1,5 +1,6 @@
 """
 文件读取工具 - 支持多编码自动检测、大文件分块、多格式解析
+内置路径遍历防护：仅允许读取白名单目录内的文件
 """
 
 import json
@@ -9,6 +10,15 @@ from pathlib import Path
 from typing import Optional
 
 from tools.registry import ToolMetadata, ToolParameter, tool_registry
+
+# 安全白名单：允许读取的基础目录和文件类型
+ALLOWED_BASE = Path(os.environ.get("FILE_READER_BASE", "/app/workspace")).resolve()
+ALLOWED_EXTENSIONS = {
+    ".txt", ".md", ".csv", ".json", ".yaml", ".yml",
+    ".py", ".java", ".html", ".css", ".js", ".xml", ".log",
+    ".env", ".toml", ".cfg", ".ini",
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 
 def _detect_encoding(file_path: str) -> str:
@@ -31,7 +41,7 @@ def read_file(
     encoding: Optional[str] = None,
 ) -> dict:
     """
-    通用文件读取
+    通用文件读取（带路径遍历防护）
 
     :param file_path: 文件绝对路径
     :param start_line: 起始行号 (0-indexed)
@@ -39,14 +49,25 @@ def read_file(
     :param encoding: 编码（留空自动检测）
     :return: {"content": str, "line_count": int, "encoding": str, "size_bytes": int}
     """
-    path = Path(file_path)
-    if not path.exists():
-        return {"error": f"File not found: {file_path}"}
-    if path.stat().st_size > 50 * 1024 * 1024:
-        return {"error": "File too large (>50MB), use chunked reading"}
+    full_path = Path(file_path).resolve()
 
-    enc = encoding or _detect_encoding(file_path)
-    suffix = path.suffix.lower()
+    # 安全检查 1: 路径必须在白名单目录内
+    if not str(full_path).startswith(str(ALLOWED_BASE)):
+        return {"error": f"Access denied: '{file_path}' is outside allowed directory"}
+
+    # 安全检查 2: 文件扩展名白名单
+    if full_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        return {"error": f"Access denied: file type '{full_path.suffix}' not allowed"}
+
+    # 安全检查 3: 文件大小限制
+    if full_path.stat().st_size > MAX_FILE_SIZE:
+        return {"error": f"File too large: {full_path.stat().st_size} bytes (max 10MB)"}
+
+    if not full_path.exists():
+        return {"error": f"File not found: {file_path}"}
+
+    enc = encoding or _detect_encoding(str(full_path))
+    suffix = full_path.suffix.lower()
 
     try:
         # JSON 结构化读取

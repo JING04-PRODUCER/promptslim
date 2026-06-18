@@ -35,18 +35,16 @@ class ToolRegistry:
     """全局工具注册中心 (单例)"""
 
     _instance: Optional["ToolRegistry"] = None
-    _tools: dict[str, tuple[ToolMetadata, Callable]] = {}
 
     def __new__(cls) -> "ToolRegistry":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._tools = {}
+            cls._instance._tools = {}  # 实例变量
         return cls._instance
 
-    @classmethod
-    def reset(cls) -> None:
+    def reset(self) -> None:
         """重置注册中心 (仅用于测试)"""
-        cls._tools = {}
+        self._tools = {}
 
     def register(self, metadata: ToolMetadata, handler: Callable) -> None:
         """注册一个工具"""

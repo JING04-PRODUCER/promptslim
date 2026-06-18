@@ -1,46 +1,14 @@
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
-venv/
 .venv/
-*.egg
-
-# Java
-target/
-*.class
-*.jar
-*.war
-!.mvn/wrapper/maven-wrapper.jar
-
-# IDE
-.idea/
-.vscode/
-*.iml
-.project
-.classpath
-.settings/
-
-# Docker
-.docker/
-
-# Env
+venv/
+*.db
 .env
-*.env.local
-
-# Logs
-logs/
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Temp
-*.tmp
-*.swp
-*.swo
-*~
+.env.*
+*.local
+secrets/**
+target/
+chroma_data/

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # 数据库
-    database_url: str = "postgresql+asyncpg://ao_user:ao_pass_2026@localhost:5432/agent_orchestrator"
+    database_url: str = "postgresql+asyncpg://ao_user:changeme@localhost:5432/agent_orchestrator"
     redis_url: str = "redis://localhost:6379/0"
 
     # LLM

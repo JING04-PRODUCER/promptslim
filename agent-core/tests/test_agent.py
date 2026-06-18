@@ -10,10 +10,13 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 配置百炼 API
-os.environ.setdefault("OPENAI_API_KEY", "sk-ws-H.REPMMPD.YY6S.MEQCIF3XAMIciVIYF7CLTne19PdWXxB0_73hznQJx-dVFYspAiA42uASWTUxPXvA7FJ7cnICsU396hMwj1HkpddtQ94qCw")
-os.environ.setdefault("OPENAI_BASE_URL", "https://ws-eq9tcvlhw5m65ftm.cn-beijing.maas.aliyuncs.com/compatible-mode/v1")
-os.environ.setdefault("LLM_MODEL", "qwen-plus")
+# 从环境变量读取 API Key（不硬编码）
+API_KEY = os.environ.get("OPENAI_API_KEY", "")
+if not API_KEY:
+    pytest.skip("OPENAI_API_KEY not set, skipping integration tests", allow_module_level=True)
+
+os.environ.setdefault("OPENAI_BASE_URL", os.environ.get("OPENAI_BASE_URL", "https://ws-eq9tcvlhw5m65ftm.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"))
+os.environ.setdefault("LLM_MODEL", os.environ.get("LLM_MODEL", "qwen-plus"))
 
 from agents.base import AgentConfig, AgentStatus
 from agents.llm_agent import LLMAgent

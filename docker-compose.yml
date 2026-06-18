@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: agent_orchestrator
       POSTGRES_USER: ao_user
-      POSTGRES_PASSWORD: ao_pass_2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     ports:
       - "5432:5432"
     volumes:
@@ -40,7 +40,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://ao_user:ao_pass_2026@postgres:5432/agent_orchestrator
+      DATABASE_URL: postgresql+asyncpg://ao_user:${POSTGRES_PASSWORD:-changeme}@postgres:5432/agent_orchestrator
       REDIS_URL: redis://redis:6379/0
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -62,7 +62,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agent_orchestrator
       SPRING_DATASOURCE_USERNAME: ao_user
-      SPRING_DATASOURCE_PASSWORD: ao_pass_2026
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       AGENT_CORE_URL: http://agent-core:8000
     depends_on:
       postgres:

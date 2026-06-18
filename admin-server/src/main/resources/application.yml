@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/agent_orchestrator
     username: ao_user
-    password: ao_pass_2026
+    password: ${DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -17,7 +17,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${JPA_DDL_AUTO:validate}  # 生产用 validate，开发用 update
     show-sql: false
     properties:
       hibernate:
