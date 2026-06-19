@@ -27,16 +27,18 @@ cd admin-server && ./mvnw test
 
 ## Adding Custom Tools
 
-1. Create a tool class in `agent-core/tools/`
-2. Register it in the plugin registry with `@tool` decorator
+1. Create a tool function in `agent-core/tools/builtin.py`
+2. Add it to `load_tools()` in `tools/registry.py`
 3. Add tests
 
 ```python
-from tools.registry import tool
+# builtin.py
+async def my_tool(param: str) -> dict:
+    """My custom tool description"""
+    return {"result": f"Result: {param}"}
 
-@tool(name="my_tool", category="custom", description="My custom tool")
-async def my_tool(param: str) -> str:
-    return f"Result: {param}"
+# registry.py load_tools()
+self.register(my_tool)
 ```
 
 ## Pull Request

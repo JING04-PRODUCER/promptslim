@@ -1,103 +1,72 @@
-"""
-工具注册中心 - 管理所有可用工具的注册、发现和元数据
-"""
+"""工具注册表"""
 
 from __future__ import annotations
-
-from typing import Callable, Optional
-from dataclasses import dataclass, field
-from datetime import datetime
-
-
-@dataclass
-class ToolParameter:
-    name: str
-    type: str
-    description: str
-    required: bool = True
-    default: Optional[str] = None
+import inspect
+from dataclasses import dataclass
+from typing import Any, Callable
 
 
 @dataclass
-class ToolMetadata:
-    """工具元数据，描述一个可被 Agent 调用的工具"""
+class Tool:
     name: str
     description: str
-    parameters: list[ToolParameter] = field(default_factory=list)
-    version: str = "0.1.0"
-    author: str = ""
-    category: str = "general"  # file, database, web, system, custom
-    timeout_seconds: int = 30
-    max_retries: int = 3
+    func: Callable
+    parameters: dict
 
 
 class ToolRegistry:
-    """全局工具注册中心 (单例)"""
+    def __init__(self):
+        self._tools: dict[str, Tool] = {}
 
-    _instance: Optional["ToolRegistry"] = None
+    async def load_tools(self):
+        from .builtin import read_file, execute_sql, web_search
+        self.register(read_file)
+        self.register(execute_sql)
+        self.register(web_search)
 
-    def __new__(cls) -> "ToolRegistry":
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._tools = {}  # 实例变量
-        return cls._instance
+    def register(self, func: Callable):
+        sig = inspect.signature(func)
+        doc = inspect.getdoc(func) or ""
+        self._tools[func.__name__] = Tool(
+            name=func.__name__,
+            description=doc.split("\n")[0] if doc else "",
+            func=func,
+            parameters={
+                "type": "object",
+                "properties": {n: {"type": "string"} for n in sig.parameters},
+                "required": [
+                    n for n, p in sig.parameters.items()
+                    if p.default == inspect.Parameter.empty
+                ],
+            },
+        )
 
-    @classmethod
-    def reset(cls) -> None:
-        """重置注册中心 (仅用于测试)"""
-        if cls._instance:
-            cls._instance._tools = {}
+    def has_tool(self, name: str) -> bool:
+        return name in self._tools
 
-    def register(self, metadata: ToolMetadata, handler: Callable) -> None:
-        """注册一个工具"""
-        self._tools[metadata.name] = (metadata, handler)
-
-    def get(self, name: str) -> Optional[tuple[ToolMetadata, Callable]]:
-        """获取工具元数据和处理器"""
+    def get_tool(self, name: str) -> Tool | None:
         return self._tools.get(name)
 
-    def list(self, category: Optional[str] = None) -> list[dict]:
-        """列出所有已注册工具（可按分类过滤）"""
-        result = []
-        for meta, _ in self._tools.values():
-            if category and meta.category != category:
-                continue
-            result.append({
-                "name": meta.name,
-                "description": meta.description,
-                "category": meta.category,
-                "parameters": [
-                    {"name": p.name, "type": p.type, "description": p.description, "required": p.required}
-                    for p in meta.parameters
-                ],
-            })
-        return result
+    def list_tools(self) -> list[str]:
+        return list(self._tools.keys())
 
-    def to_openai_tools(self) -> list[dict]:
-        """转换为 OpenAI function calling 格式"""
-        tools = []
-        for meta, _ in self._tools.values():
-            properties = {}
-            required = []
-            for p in meta.parameters:
-                properties[p.name] = {"type": p.type, "description": p.description}
-                if p.required:
-                    required.append(p.name)
-
-            tools.append({
+    def get_openai_tools(self) -> list[dict]:
+        return [
+            {
                 "type": "function",
                 "function": {
-                    "name": meta.name,
-                    "description": meta.description,
-                    "parameters": {
-                        "type": "object",
-                        "properties": properties,
-                        "required": required,
-                    },
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.parameters,
                 },
-            })
-        return tools
+            }
+            for t in self._tools.values()
+        ]
 
-
-# 全局单例
-tool_registry = ToolRegistry()
+    async def execute(self, name: str, **kwargs) -> Any:
+        tool = self._tools.get(name)
+        if not tool:
+            raise ValueError(f"工具 {name} 不存在")
+        if inspect.iscoroutinefunction(tool.func):
+            return await tool.func(**kwargs)
+        return tool.func(**kwargs)

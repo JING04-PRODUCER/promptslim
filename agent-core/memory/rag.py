@@ -110,3 +110,15 @@ def init_memory(base_url: str, api_key: str, model: str = "text-embedding-3-smal
     global memory_store
     memory_store = AgentMemory(base_url, api_key, model)
     return memory_store
+
+
+class RAGMemory:
+    """简化的 RAG 记忆接口 — 兼容新 API"""
+
+    def __init__(self):
+        self._memory = memory_store
+
+    async def recall(self, query: str, top_k: int = 5) -> str:
+        if self._memory is None:
+            return ""
+        return await self._memory.recall_as_context(query, top_k)

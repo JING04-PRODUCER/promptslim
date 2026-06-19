@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0] - 2026-06-19
+
+### Changed
+- Simplified ToolRegistry with inspect-based auto-registration
+- Replaced plugin decorator pattern with builtin.py functions
+- Streamlined main.py with lifespan and RAGMemory
+- Removed workflow engine and multi-agent orchestration
+- Simplified API surface (agents, health endpoints only)
+
 ## [0.3.0] - 2026-06-17
 
 ### Added

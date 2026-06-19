@@ -268,10 +268,6 @@ curl -X POST http://localhost:8000/api/memory/recall \
 
 Issues and PRs welcome! See [contribution guide](docs/PLAN2-CONTRIBUTION-GUIDE.md) for getting started.
 
-## AI Assistance
-
-This project was developed with Claude (Anthropic) as a coding assistant. AI contributions include code structure suggestions, test generation, and documentation drafts. All AI-generated code has been reviewed and verified by the developer. Design decisions and core logic are independently authored.
-
 ## License
 
 MIT — see [LICENSE](LICENSE)
