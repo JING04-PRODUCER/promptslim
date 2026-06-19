@@ -92,6 +92,12 @@ graph TB
    └────────┘  └──────────┘ └───────────┘
 ```
 
+## Demo
+
+![AgentOrchestrator Demo](demo.png)
+
+*Create agents → chain workflows → get results — all via REST API.*
+
 ## Quick Start
 
 ### Prerequisites
