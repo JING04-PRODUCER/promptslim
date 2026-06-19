@@ -1,36 +1,6 @@
 version: "3.9"
 
 services:
-  # ==================== PostgreSQL ====================
-  postgres:
-    image: postgres:16-alpine
-    container_name: ao-postgres
-    environment:
-      POSTGRES_DB: agent_orchestrator
-      POSTGRES_USER: ao_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ao_user -d agent_orchestrator"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  # ==================== Redis ====================
-  redis:
-    image: redis:7-alpine
-    container_name: ao-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   # ==================== Python Agent Core ====================
   agent-core:
     build:
@@ -38,35 +8,21 @@ services:
       dockerfile: Dockerfile
     container_name: ao-agent-core
     ports:
-      - "8000:8000"
+      - "${AGENT_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://ao_user:${POSTGRES_PASSWORD:-changeme}@postgres:5432/agent_orchestrator
-      REDIS_URL: redis://redis:6379/0
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
-  # ==================== Java Admin Server ====================
-  admin-server:
+  # ==================== Streamlit Dashboard ====================
+  dashboard:
     build:
-      context: ./admin-server
+      context: ./dashboard
       dockerfile: Dockerfile
-    container_name: ao-admin-server
+    container_name: ao-dashboard
     ports:
-      - "9090:9090"
+      - "${DASHBOARD_PORT:-8501}:8501"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agent_orchestrator
-      SPRING_DATASOURCE_USERNAME: ao_user
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      AGENT_CORE_URL: http://agent-core:8000
+      AGENT_API_URL: http://agent-core:8000
     depends_on:
-      postgres:
-        condition: service_healthy
-
-volumes:
-  pgdata:
+      - agent-core
+    restart: unless-stopped
