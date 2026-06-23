@@ -1,6 +1,6 @@
 # AgentOrchestrator
 
-**Cross-language AI Agent orchestration platform — Python FastAPI inference core + Java Spring Boot admin panel. Build LLM agents with tool calling, multi-agent workflows, and visual management in minutes.**
+**Cross-language AI Agent orchestration platform — Python FastAPI inference core + Java Spring Boot admin panel. Tool calling, multi-agent workflows, RAG memory, and a Vue 3 dashboard.**
 
 [🌐 English](README.md) | [中文](README_zh.md)
 
@@ -15,63 +15,22 @@
 
 > 🤖 **AI Agent · LLM Orchestration · Function Calling · Multi-Agent Workflow**
 
-## Why AgentOrchestrator?
+## Why This Exists
 
-| Problem | Existing Solutions | This Project |
-|---------|-------------------|--------------|
-| Python is great for LLM inference, weak for enterprise management | FastAPI lacks built-in admin | FastAPI inference + Spring Boot admin |
-| Java ecosystem mature but LLM integration is fragmented | Spring AI still evolving | REST bridge to Python LLM capabilities |
-| Agent frameworks lock you into specific models | Most bind to OpenAI | OpenAI-compatible protocol — any model works |
-| Multi-agent orchestration lacks visibility | Code-only configuration | REST API with Web UI roadmap |
-
-## Why AgentOrchestrator?
+LangChain/LangGraph 的学习曲线很陡，CrewAI 功能全但比较重。我想有一个能自己掌控、代码量不大的 Agent 框架。
 
 | Need | LangGraph | CrewAI | AgentOrchestrator |
 |------|-----------|--------|-------------------|
-| Python LLM inference | ✅ | ✅ | ✅ |
-| Enterprise admin (RBAC, audit) | ❌ | ❌ | ✅ Spring Boot |
-| Java ecosystem integration | ❌ | ❌ | ✅ |
-| Visual workflow management | ❌ | ❌ | ✅ Roadmap |
-| Multi-agent DAG workflow | ✅ | ✅ | ✅ |
-| Tool plugin registry | ✅ | ✅ | ✅ |
-| RAG memory system | ✅ | ✅ | ✅ |
+| Python LLM inference | Yes | Yes | Yes |
+| Java admin panel | No | No | Yes |
+| DAG workflow | Yes | Yes | Yes |
+| Tool plugin registry | Yes | Yes | Yes |
+| RAG memory | Yes | Yes | In-memory only |
+| Self-hosted | Yes | Yes | Yes (Docker) |
+
+模型无关——任何 OpenAI 兼容 API 都能用。Java 管理后台是因为我 Java 也写。
 
 ## Architecture
-
-```mermaid
-graph TB
-    Client[Client / SDK]
-    Admin[Spring Boot Admin<br/>port :9090]
-    Gateway[FastAPI Gateway<br/>port :8000]
-    Orchestrator[Agent Orchestrator]
-    Agent1[Agent 1]
-    Agent2[Agent 2]
-    ToolReg[Tool Registry]
-    WebSearch[Web Search]
-    FileReader[File Reader]
-    SQLExec[SQL Executor]
-    RAG[RAG Memory]
-    DB[(PostgreSQL)]
-    Redis[(Redis)]
-    AI[OpenAI-compatible API]
-
-    Client --> Admin
-    Client --> Gateway
-    Admin -->|REST API| Gateway
-    Gateway --> Orchestrator
-    Orchestrator --> Agent1
-    Orchestrator --> Agent2
-    Agent1 --> ToolReg
-    Agent2 --> ToolReg
-    ToolReg --> WebSearch
-    ToolReg --> FileReader
-    ToolReg --> SQLExec
-    Agent1 --> RAG
-    Agent2 --> RAG
-    Gateway --> DB
-    Gateway --> Redis
-    Gateway --> AI
-```
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -175,7 +134,7 @@ curl -X POST http://localhost:8000/api/workflows \
 | `list_tables` | Database schema inspection | database |
 | `web_search` | DuckDuckGo web search (free, no API key) | web |
 
-> Extend via plugin registry — add your own tools in minutes.
+> Extend via plugin registry — add your own tools in `tools/`.
 
 ## End-to-End Example
 
@@ -251,17 +210,32 @@ curl -X POST http://localhost:8000/api/memory/recall \
 | Storage | PostgreSQL 16 + Redis 7 | State persistence, caching |
 | Deployment | Docker Compose | One-command startup |
 
+## 当前限制
+
+需要先说明的几件事：
+
+- **RAG 记忆是内存存储**，重启后数据丢失。生产环境需要接向量数据库，目前还没做
+- **DAG 工作流上下文传递有限**：上游 Agent 的输出拼接到下游任务字符串里，没有结构化传递
+- **无认证机制**：API 端点没有 auth，内网部署用，别暴露到公网
+- **工具注册是代码级**：新工具需要在 `tools/` 下写 Python 文件并注册，MCP 协议支持在计划中
+- **Java 管理后台数据聚合层还在补**——前端仪表盘（Vue 3 SPA）已可用
+
+这些不是 bug，是当前状态。欢迎 PR。
+
 ## Roadmap
 
 - [x] LLM Agent core (OpenAI compatible)
 - [x] Tool registry & invocation
-- [x] Multi-agent workflow engine
+- [x] Multi-agent workflow engine (sequential + parallel)
 - [x] Spring Boot admin backend
 - [x] Web Search tool (DuckDuckGo)
-- [x] RAG memory system
-- [ ] Web UI dashboard (Vue 3)
-- [ ] Code Executor tool
+- [x] RAG memory system (in-memory)
+- [x] Vue 3 dashboard SPA
+- [x] Streamlit admin console
+- [ ] RAG persistence (vector DB integration)
+- [ ] Code Executor tool (sandboxed)
 - [ ] MCP protocol support
+- [ ] API authentication
 - [ ] Monitoring & alerts (Prometheus + Grafana)
 
 ## Contributing
