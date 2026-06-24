@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 必须在导入 file_reader 之前设置，因为 ALLOWED_BASE 在模块加载时计算
 os.environ["FILE_READER_BASE"] = tempfile.gettempdir()
 
-from tools.registry import ToolRegistry, ToolMetadata, ToolParameter, tool_registry
+from tools.registry import ToolMetadata, ToolParameter, tool_registry
 from tools.file_reader import read_file, _detect_encoding
 
 
@@ -22,7 +22,7 @@ class TestToolRegistry:
     """工具注册中心测试"""
 
     def setup_method(self):
-        ToolRegistry.reset()
+        tool_registry.reset()
 
     def test_register_and_get(self):
         meta = ToolMetadata(name="test_tool", description="A test tool")
@@ -47,7 +47,7 @@ class TestToolRegistry:
 
         db_tools = tool_registry.list(category="database")
         assert len(db_tools) == 1
-        assert db_tools[0]["name"] == "db1"
+        assert db_tools[0].name == "db1"
 
         all_tools = tool_registry.list()
         assert len(all_tools) == 2

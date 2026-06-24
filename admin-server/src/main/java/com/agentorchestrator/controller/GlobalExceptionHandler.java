@@ -1,4 +1,4 @@
-package com.jing04.orchestrator.controller;
+package com.agentorchestrator.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
