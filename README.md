@@ -1,247 +1,111 @@
 # AgentOrchestrator
 
-**Cross-language AI Agent orchestration platform — Python FastAPI inference core + Java Spring Boot admin panel. Tool calling, multi-agent workflows, RAG memory, and a Vue 3 dashboard.**
-
-[🌐 English](README.md) | [中文](README_zh.md)
+一个 Agent 编排框架，Python 写推理核心，Java Spring Boot 做管理后台，用 REST API 把两部分连起来。支持 Tool Calling、多 Agent 工作流、RAG 记忆。
 
 [![CI](https://github.com/JING04-PRODUCER/agent-orchestrator/actions/workflows/python-test.yml/badge.svg)](https://github.com/JING04-PRODUCER/agent-orchestrator/actions/workflows/python-test.yml)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Java](https://img.shields.io/badge/java-17-orange.svg)](https://adoptium.net/)
-[![Spring Boot](https://img.shields.io/badge/spring--boot-3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Architecture](https://img.shields.io/badge/arch-cross--language-blueviolet)]()
-![Category](https://img.shields.io/badge/category-ai--agent%20|%20llm--orchestration%20|%20tool--calling-orange)
 
-> 🤖 **AI Agent · LLM Orchestration · Function Calling · Multi-Agent Workflow**
+## 为什么写这个
 
-## Why This Exists
+LangChain 和 LangGraph 概念太多，学起来费劲。CrewAI 功能全但太重了。我就想要一个自己能完全掌控的轻量框架，Agent 定义、工具注册、工作流编排都通过 API 来，再配个管理后台方便查看状态。
 
-LangChain/LangGraph 的学习曲线很陡，CrewAI 功能全但比较重。我想有一个能自己掌控、代码量不大的 Agent 框架。
+模型不挑——只要是 OpenAI 兼容的 API 都能接。
 
-| Need | LangGraph | CrewAI | AgentOrchestrator |
-|------|-----------|--------|-------------------|
-| Python LLM inference | Yes | Yes | Yes |
-| Java admin panel | No | No | Yes |
-| DAG workflow | Yes | Yes | Yes |
-| Tool plugin registry | Yes | Yes | Yes |
-| RAG memory | Yes | Yes | In-memory only |
-| Self-hosted | Yes | Yes | Yes (Docker) |
+## 跑起来
 
-模型无关——任何 OpenAI 兼容 API 都能用。Java 管理后台是因为我 Java 也写。
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│           Admin Server (Spring Boot)             │
-│  Agent CRUD · Task Scheduling · Monitoring       │
-│                    port 9090                     │
-└────────────────────────┬────────────────────────┘
-                         │ REST API
-┌────────────────────────▼────────────────────────┐
-│          Agent Core (Python FastAPI)             │
-│  LLM Agent · Tool Calling · Retry · Workflow     │
-│                    port 8000                     │
-└───────┬────────────┬────────────┬───────────────┘
-        │            │            │
-   ┌────▼───┐  ┌─────▼────┐ ┌───▼───────┐
-   │ OpenAI │  │ Local    │ │ PostgreSQL│
-   │Compat. │  │ Tools    │ │  + Redis  │
-   └────────┘  └──────────┘ └───────────┘
-```
-
-## Demo
-
-![AgentOrchestrator Demo](demo.png)
-
-*Create agents → chain workflows → get results — all via REST API.*
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.12+
-- Java 21+
-- Docker & Docker Compose (recommended)
-- OpenAI-compatible API key
-
-### Docker (recommended)
+需要 Python 3.12+、Java 21+。
 
 ```bash
 git clone https://github.com/JING04-PRODUCER/agent-orchestrator.git
 cd agent-orchestrator
-cp .env.example .env  # Edit and add your OPENAI_API_KEY
+cp .env.example .env   # 填上你的 OPENAI_API_KEY
 docker compose up -d
 
-# Verify
-curl http://localhost:8000/health       # Agent Core
-curl http://localhost:9090/api/admin/health  # Admin Server
+curl http://localhost:8000/health
+curl http://localhost:9090/api/admin/health
 ```
 
-### Local Development
+不用 Docker 的话：
 
 ```bash
-# Agent Core (Python)
 cd agent-core
 pip install -r requirements.txt
-python main.py                 # http://localhost:8000
+python main.py          # Agent Core → :8000
 
-# Admin Server (Java)
 cd admin-server
-./mvnw spring-boot:run         # http://localhost:9090
+./mvnw spring-boot:run  # Admin Server → :9090
 ```
 
-## Core Features
+## 怎么用
 
-### Create & Run an Agent
+先创建一个 Agent，给它配好系统提示词和工具，然后发任务让它执行。
 
 ```bash
-# Create
+# 创建一个代码审查 Agent
 curl -X POST http://localhost:8000/api/agents \
   -H "Content-Type: application/json" \
   -d '{
     "name": "code-reviewer",
-    "system_prompt": "You are a code review expert...",
-    "tools": ["read_file", "execute_sql"],
-    "max_iterations": 5
-  }'
-
-# Execute
-curl -X POST http://localhost:8000/api/agents/code-reviewer/run \
-  -H "Content-Type: application/json" \
-  -d '{"task": "Review app.py for security issues"}'
-```
-
-### Multi-Agent Workflow
-
-```bash
-curl -X POST http://localhost:8000/api/workflows \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agents": ["analyzer", "reviewer", "tester"],
-    "task": "Analyze code quality for this project",
-    "mode": "sequential"
-  }'
-```
-
-## Built-in Tools
-
-| Tool | Description | Category |
-|------|-------------|:--------:|
-| `read_file` | Multi-encoding file reader (txt/json/csv/md) | file |
-| `execute_sql` | Safe parameterized SQL queries (SELECT only) | database |
-| `list_tables` | Database schema inspection | database |
-| `web_search` | DuckDuckGo web search (free, no API key) | web |
-
-> Extend via plugin registry — add your own tools in `tools/`.
-
-## End-to-End Example
-
-### 1. Create a Code Review Agent
-
-```bash
-curl -X POST http://localhost:8000/api/agents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "code-reviewer",
-    "model": "claude-sonnet-4-6",
-    "system_prompt": "You are a senior code reviewer. Focus on security, performance, and best practices.",
+    "system_prompt": "你是一个代码审查专家，关注安全漏洞和性能问题。",
     "tools": ["read_file", "web_search"],
     "max_iterations": 5
   }'
-```
 
-### 2. Submit a Review Task
-
-```bash
+# 让它审查代码
 curl -X POST http://localhost:8000/api/agents/code-reviewer/run \
   -H "Content-Type: application/json" \
-  -d '{"task": "Review app.py for SQL injection and XSS vulnerabilities"}'
-```
+  -d '{"task": "检查 app.py 有没有 SQL 注入和 XSS 漏洞"}'
 
-### 3. Check Results
-
-```bash
+# 查看结果
 curl http://localhost:8000/api/agents/code-reviewer/status
 ```
 
-### 4. Multi-Agent Pipeline
+多个 Agent 可以串成工作流：
 
 ```bash
 curl -X POST http://localhost:8000/api/workflows \
   -H "Content-Type: application/json" \
   -d '{
     "agents": ["analyzer", "code-reviewer", "tester"],
-    "task": "Full code quality audit for the auth module",
+    "task": "全面审查 auth 模块的代码质量",
     "mode": "sequential"
   }'
 ```
 
-### 5. View in Dashboard
+管理后台在 `http://localhost:9090`，可以看到所有 Agent 的状态和任务执行情况。
 
-Open `http://localhost:9090` to see agents, tasks, and workflow status in the Spring Boot admin panel.
+## 内置工具
 
-## RAG Memory System
+| 工具 | 做什么 |
+|------|--------|
+| `read_file` | 读取文件，支持 txt/json/csv/md，自动检测编码 |
+| `execute_sql` | 执行 SQL 查询（只允许 SELECT），防注入 |
+| `list_tables` | 查看数据库有哪些表 |
+| `web_search` | 用 DuckDuckGo 搜网页，免费不用 API Key |
 
-```bash
-# Initialize memory
-curl -X POST http://localhost:8000/api/memory/init
+想加自己的工具？在 `tools/` 目录下写个 Python 文件注册就行。
 
-# Store context
-curl -X POST http://localhost:8000/api/memory/remember \
-  -H "Content-Type: application/json" \
-  -d '{"content": "The authentication module uses JWT...", "metadata": {"topic": "auth"}}'
+## 架构
 
-# Semantic recall
-curl -X POST http://localhost:8000/api/memory/recall \
-  -H "Content-Type: application/json" \
-  -d '{"query": "How does login work?"}'
+```
+Admin Server (Spring Boot, :9090)  ← 管理后台
+        ↓ REST API
+Agent Core (Python FastAPI, :8000) ← 推理引擎
+        ↓
+OpenAI 兼容 API · 本地工具 · PostgreSQL + Redis
 ```
 
-## Tech Stack
+## 已知问题
 
-| Layer | Technology | Notes |
-|-------|-----------|-------|
-| AI Inference | Python FastAPI + OpenAI SDK | LLM calls, Function Calling |
-| Tool System | Plugin registry + asyncio | Timeout control, auto-retry |
-| Workflow | DAG orchestration + parallel scheduling | Multi-agent collaboration |
-| Admin | Java 21 + Spring Boot 3.4 | REST API, JPA |
-| Storage | PostgreSQL 16 + Redis 7 | State persistence, caching |
-| Deployment | Docker Compose | One-command startup |
+- RAG 记忆目前是内存存储，重启就没了。后面会接向量数据库
+- 工作流里上游 Agent 的输出目前是拼字符串传给下游，不够结构化
+- API 没有鉴权，只能内网用
+- 新工具要写代码注册，还没做 MCP 协议支持
 
-## 当前限制
-
-需要先说明的几件事：
-
-- **RAG 记忆是内存存储**，重启后数据丢失。生产环境需要接向量数据库，目前还没做
-- **DAG 工作流上下文传递有限**：上游 Agent 的输出拼接到下游任务字符串里，没有结构化传递
-- **无认证机制**：API 端点没有 auth，内网部署用，别暴露到公网
-- **工具注册是代码级**：新工具需要在 `tools/` 下写 Python 文件并注册，MCP 协议支持在计划中
-- **Java 管理后台数据聚合层还在补**——前端仪表盘（Vue 3 SPA）已可用
-
-这些不是 bug，是当前状态。欢迎 PR。
-
-## Roadmap
-
-- [x] LLM Agent core (OpenAI compatible)
-- [x] Tool registry & invocation
-- [x] Multi-agent workflow engine (sequential + parallel)
-- [x] Spring Boot admin backend
-- [x] Web Search tool (DuckDuckGo)
-- [x] RAG memory system (in-memory)
-- [x] Vue 3 dashboard SPA
-- [x] Streamlit admin console
-- [ ] RAG persistence (vector DB integration)
-- [ ] Code Executor tool (sandboxed)
-- [ ] MCP protocol support
-- [ ] API authentication
-- [ ] Monitoring & alerts (Prometheus + Grafana)
-
-## Contributing
-
-Issues and PRs welcome! See [contribution guide](docs/PLAN2-CONTRIBUTION-GUIDE.md) for getting started.
+上面这些都是当前实际情况，不是 bug。欢迎 PR。
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT
