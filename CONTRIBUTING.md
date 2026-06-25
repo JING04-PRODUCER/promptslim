@@ -18,7 +18,7 @@ ruff check promptslim/    # Lint
 ## Adding Compression Rules
 
 - Add patterns to `compressor.py` using pre-compiled regex at module level
-- Each pattern must have a corresponding test in `tests/test_prompslim.py`
+- Each pattern must have a corresponding test in `tests/test_promptslim.py`
 - Code protection: ensure `looks_like_code()` correctly excludes your test cases
 
 ## Pull Request
