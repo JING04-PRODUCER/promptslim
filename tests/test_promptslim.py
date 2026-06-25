@@ -61,15 +61,65 @@ class TestTokenizer:
 
 
 class TestCompressor:
-    def test_strip_text_zh(self):
-        text = "嗯，那个我想说的是，这个功能非常非常好用，对吧？"
+    def test_strip_text_zh_fillers(self):
+        """中文填充词被删除"""
+        text = "嗯，那个我想说的是，这个功能好用，对吧？"
         result = strip_text(text)
-        assert len(result) <= len(text)
+        assert "嗯" not in result
+        assert "那个" not in result
 
-    def test_strip_text_en(self):
-        text = "I would like to basically say that this is really really good"
+    def test_strip_text_zh_modifiers(self):
+        """中文冗余修饰被删除"""
+        text = "这个功能非常非常好用"
         result = strip_text(text)
-        assert len(result) <= len(text)
+        assert "非常非常" not in result
+        assert "非常" not in result
+
+    def test_strip_text_zh_polite(self):
+        """中文客套话被删除"""
+        text = "这是分析结果。希望对你有所帮助。感谢你的阅读。"
+        result = strip_text(text)
+        assert "希望对你有所帮助" not in result
+        assert "感谢你的阅读" not in result
+
+    def test_strip_text_en_fillers(self):
+        """英文填充词被删除"""
+        text = "I would like to basically say that this is um good"
+        result = strip_text(text)
+        assert "um" not in result
+        assert "basically" not in result
+        assert "I would like to" not in result
+
+    def test_strip_text_en_modifiers(self):
+        """英文冗余修饰被删除"""
+        text = "This is really really very extremely good"
+        result = strip_text(text)
+        assert "really" not in result
+        assert "very" not in result
+        assert "extremely" not in result
+        assert "good" in result
+
+    def test_strip_text_en_verbose(self):
+        """英文冗长短句被简化"""
+        text = "in order to make this work due to the fact that it is important"
+        result = strip_text(text)
+        assert "in order to" not in result
+        assert "due to the fact that" not in result
+
+    def test_strip_text_code_unchanged(self):
+        """代码不被改变"""
+        text = "def foo():\n    return 1"
+        result = strip_text(text)
+        assert result == text
+
+    def test_strip_text_savings(self):
+        """含冗余的文本应有实际节省"""
+        text = "嗯，那个我想说的是，这个功能非常非常好用，对吧？I would like to basically say this is really really good."
+        result = strip_text(text)
+        assert len(result) < len(text)
+        # 冗余文本应节省至少 15%
+        savings = (len(text) - len(result)) / len(text) * 100
+        assert savings >= 15, f"预期节省 >= 15%，实际 {savings:.1f}%"
 
     def test_strip_text_preserves_code(self):
         text = "def fibonacci(n): return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2)"

@@ -1,4 +1,4 @@
-"""文本压缩器"""
+"""文本压缩器 — 40+ 中英文冗余检测模式 + LLM 深度压缩"""
 
 from __future__ import annotations
 
@@ -13,15 +13,81 @@ from .tokenizer import cost, count
 
 logger = logging.getLogger(__name__)
 
-_REPEAT = re.compile(r"(.{10,})\1{2,}")
-_BLANK = re.compile(r"\n{3,}")
-_SPACE = re.compile(r" {2,}")
-_DUP_PUNCT = re.compile(r"([！!？?。.，,])\1+")
+# ═══════════════════════════════════════════════════
+# 代码检测
+# ═══════════════════════════════════════════════════
 _CODE_SIGNS = [
     re.compile(r"^\s*(def |class |import |from |return |func |var |let |const )", re.M),
     re.compile(r"[{}\[\]]"),
     re.compile(r"->\s*\w"),
 ]
+
+# ═══════════════════════════════════════════════════
+# 英文冗余模式
+# ═══════════════════════════════════════════════════
+_FILLERS_EN = re.compile(
+    r'\b(um|uh|hmm|er|ah|eh|like|basically|literally|actually|you\s+know|i\s+mean|right|okay|so|well)\b[,\s]*',
+    re.IGNORECASE,
+)
+_MODIFIERS_EN = re.compile(
+    r'\b(very|really|extremely|absolutely|quite|rather|highly|totally|completely|definitely|certainly|obviously)\s+',
+    re.IGNORECASE,
+)
+_VERBOSE_EN = [
+    (re.compile(r'\bin order to\b', re.IGNORECASE), 'to'),
+    (re.compile(r'\bdue to the fact that\b', re.IGNORECASE), 'because'),
+    (re.compile(r'\bat this point in time\b', re.IGNORECASE), 'now'),
+    (re.compile(r'\bat the present time\b', re.IGNORECASE), 'now'),
+    (re.compile(r'\bin the event that\b', re.IGNORECASE), 'if'),
+    (re.compile(r'\bon a daily basis\b', re.IGNORECASE), 'daily'),
+    (re.compile(r'\bin the near future\b', re.IGNORECASE), 'soon'),
+    (re.compile(r'\bthe majority of\b', re.IGNORECASE), 'most'),
+    (re.compile(r'\ba large number of\b', re.IGNORECASE), 'many'),
+    (re.compile(r'\ba lot of\b', re.IGNORECASE), 'many'),
+    (re.compile(r'\bhas the ability to\b', re.IGNORECASE), 'can'),
+    (re.compile(r'\bis able to\b', re.IGNORECASE), 'can'),
+    (re.compile(r'\bwith regard to\b', re.IGNORECASE), 'about'),
+    (re.compile(r'\bin regards to\b', re.IGNORECASE), 'about'),
+    (re.compile(r'\bfor the purpose of\b', re.IGNORECASE), 'for'),
+    (re.compile(r'\bin the process of\b', re.IGNORECASE), ''),
+    (re.compile(r'\bit is important to note that\b', re.IGNORECASE), 'note:'),
+    (re.compile(r'\bplease note that\b', re.IGNORECASE), 'note:'),
+    (re.compile(r'\bit should be noted that\b', re.IGNORECASE), 'note:'),
+    (re.compile(r'\bit is worth noting that\b', re.IGNORECASE), 'note:'),
+    (re.compile(r'\bI would like to\b', re.IGNORECASE), 'I will'),
+    (re.compile(r'\bI wanted to\b', re.IGNORECASE), 'I will'),
+    (re.compile(r'\bjust wanted to\b', re.IGNORECASE), ''),
+    (re.compile(r'\bas a matter of fact\b', re.IGNORECASE), ''),
+    (re.compile(r'\bneedless to say\b', re.IGNORECASE), ''),
+    (re.compile(r'\bit goes without saying that\b', re.IGNORECASE), ''),
+    (re.compile(r'\ball things considered\b', re.IGNORECASE), ''),
+    (re.compile(r'\bat the end of the day\b', re.IGNORECASE), 'ultimately'),
+    (re.compile(r'\bwhen all is said and done\b', re.IGNORECASE), ''),
+    (re.compile(r'\bwithout a doubt\b', re.IGNORECASE), ''),
+]
+
+# ═══════════════════════════════════════════════════
+# 中文冗余模式
+# ═══════════════════════════════════════════════════
+_FILLERS_ZH = re.compile(r'[嗯啊哦呃呢吧呀嘛呐哈呵嘿哼]，?')
+_MODIFIERS_ZH = re.compile(r'(非常|特别|极其|十分|超级|相当|格外|异常|无比|万分|极度)+')
+_POLITE_ZH = re.compile(
+    r'(希望对你有所帮助[。！]?|感谢你的阅读[。！]?|谢谢你的关注[。！]?'
+    r'|如果[你有]?任何问题[，,]请[随时]?联系[我我们][。！]?'
+    r'|希望以上[内容信息]?对[你有]?所帮助[。！]?'
+    r'|以上[就是是]?[我对关于].*?的[一些]?(回答|解答|回复|想法|建议|分析)[。！]?'
+    r'|欢迎[大家]?[提出]?([宝贵]?意见|指正|交流|讨论)[。！]?'
+    r'|希望能够?帮到[你您][。！]?'
+    r'|以上[。！]?)'
+)
+_MARKER_ZH = re.compile(r'[那个][啥么]?[,，]?')
+_DUP_CHAR_ZH = re.compile(r'([，。！？；：""''【】（）《》—…\u4e00-\u9fff])\1{1,}')
+_REPEAT_SENT = re.compile(r'(.{10,})\1{1,}')
+
+# 基础清理
+_BLANK = re.compile(r"\n{3,}")
+_SPACE = re.compile(r" {2,}")
+_DUP_PUNCT = re.compile(r"([！!？?。.，,])\1+")
 
 
 def looks_like_code(text: str) -> bool:
@@ -45,11 +111,29 @@ def looks_like_code(text: str) -> bool:
 
 
 def strip_text(text: str) -> str:
+    """应用 40+ 中英文冗余检测模式，在保留语义的前提下精简文本"""
     if not text or looks_like_code(text):
         return text
+
+    result = text
+
+    # --- 英文模式 ---
+    result = _FILLERS_EN.sub('', result)
+    result = _MODIFIERS_EN.sub('', result)
+    for pattern, replacement in _VERBOSE_EN:
+        result = pattern.sub(replacement, result)
+
+    # --- 中文模式 ---
+    result = _FILLERS_ZH.sub('', result)
+    result = _MODIFIERS_ZH.sub('', result)
+    result = _POLITE_ZH.sub('', result)
+    result = _MARKER_ZH.sub('', result)
+
+    # --- 通用清理 ---
+    # 重复行去重
     seen = set()
     lines = []
-    for line in text.split("\n"):
+    for line in result.split("\n"):
         s = line.strip()
         if s and s not in seen:
             seen.add(s)
@@ -57,9 +141,19 @@ def strip_text(text: str) -> str:
         elif not s:
             lines.append(line)
     result = "\n".join(lines)
+
+    # 多余空行、空格、重复标点
     result = _BLANK.sub("\n\n", result)
     result = _SPACE.sub(" ", result)
     result = _DUP_PUNCT.sub(r"\1", result)
+
+    # 去除多余逗号句号
+    result = re.sub(r'[,，]\s*[,，]', '，', result)
+    result = re.sub(r'[。！!？?]\s*[。！!？?]', '。', result)
+
+    # 清理空白行首尾
+    result = result.strip()
+
     return result
 
 

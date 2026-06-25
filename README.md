@@ -6,7 +6,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/promptslim?style=flat-square)](https://pypi.org/project/promptslim/)
 [![Python](https://img.shields.io/pypi/pyversions/promptslim)](https://pypi.org/project/promptslim/)
-[![CI](https://github.com/JING04-PRODUCER/promptslim/actions/workflows/test.yml/badge.svg)](https://github.com/JING04-PRODUCER/promptslim/actions/workflows/test.yml)
+[![CI](https://github.com/JING04-PRODUCER/promptslim/actions/workflows/python-test.yml/badge.svg)](https://github.com/JING04-PRODUCER/promptslim/actions/workflows/python-test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/promptslim)](https://pypi.org/project/promptslim/)
 
@@ -191,17 +191,16 @@ print(f"Estimated savings: ${report.cost_per_call_saved:.6f}/call")
 promptslim/
 ├── promptslim/
 │   ├── __init__.py        # Public API exports
+│   ├── __main__.py        # python -m promptslim entry
 │   ├── cache.py           # Anthropic Prompt Caching analysis
 │   ├── cli.py             # CLI entry point
-│   ├── compressor.py      # Compressors (rule-based + LLM)
-│   ├── redundancy.py      # Redundancy detection patterns
-│   ├── reporter.py        # Report generation + pricing table
+│   ├── compressor.py      # 40+ redundancy patterns + LLM compressor
+│   ├── patch.py           # OpenAI SDK monkey-patch
 │   └── tokenizer.py       # Multi-model token counting
 ├── tests/
-│   └── test_prompslim.py
+│   └── test_promptslim.py
 ├── .github/workflows/
-│   ├── publish.yml
-│   └── test.yml
+│   └── python-test.yml
 ├── pyproject.toml
 └── README.md
 ```
