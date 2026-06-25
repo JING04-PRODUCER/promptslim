@@ -8,6 +8,7 @@ venv/
 *.db
 .env
 .env.*
+!.env.example
 *.local
 secrets/**
 target/
