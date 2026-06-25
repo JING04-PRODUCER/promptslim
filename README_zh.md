@@ -127,14 +127,14 @@ promptslim compare old.txt new.txt
 promptslim/
 ├── promptslim/
 │   ├── __init__.py        # 公共 API
-│   ├── cli.py             # CLI 入口
-│   ├── compressor.py      # 压缩器（规则 + LLM）
+│   ├── __main__.py        # python -m promptslim 入口
 │   ├── cache.py           # Anthropic Prompt Caching 分析
-│   ├── redundancy.py      # 冗余检测模式
-│   ├── reporter.py        # 报告生成 + 价格表
+│   ├── cli.py             # CLI 入口
+│   ├── compressor.py      # 40+ 冗余模式 + LLM 压缩器
+│   ├── patch.py           # OpenAI SDK 自动拦截
 │   └── tokenizer.py       # 多模型 Token 计数
 ├── tests/
-│   └── test_prompslim.py
+│   └── test_promptslim.py
 ├── pyproject.toml
 └── README.md
 ```

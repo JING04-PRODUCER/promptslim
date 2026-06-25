@@ -89,13 +89,13 @@ print(f"节省 {report.savings_pct}% Token")
 
 ```bash
 # 统计 Token 数
-promptslim count -i prompt.txt
+promptslim count prompt.txt
 
 # 智能压缩（LLM 二次精简）
-promptslim smart -i prompt.txt --api-key YOUR_KEY
+promptslim smart prompt.txt --api-key YOUR_KEY
 
-# 对比精简前后差异
-promptslim compare -i prompt.txt
+# 对比两个文本的 Token 差异
+promptslim compare prompt.txt prompt-v2.txt
 ```
 
 | 功能 | 说明 |
