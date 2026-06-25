@@ -3,41 +3,47 @@
 ## [0.4.0] - 2026-06-19
 
 ### Changed
-- Simplified ToolRegistry with inspect-based auto-registration
-- Replaced plugin decorator pattern with builtin.py functions
-- Streamlined main.py with lifespan and RAGMemory
-- Removed workflow engine and multi-agent orchestration
-- Simplified API surface (agents, health endpoints only)
+- Merged redundancy engine into compressor (`strip_text`)
+- Replaced SlimReport with CompressReport dataclass
+- Simplified tokenizer API: `count`, `count_batch`, `est_zh`, `cost`
+- Renamed cache API: `analyze`/`CacheReport`
+- Removed redundancy.py and reporter.py modules
+- Pre-compiled regex patterns at module level
 
 ## [0.3.0] - 2026-06-17
 
 ### Added
-- Web Search tool (DuckDuckGo, free, no API key)
-- RAG memory system with cosine similarity search
-- Memory API endpoints (`/api/memory/init`, `/remember`, `/recall`, `/recall-context`)
+- 40+ Chinese + English redundancy patterns (V2)
+- Code block protection (`_is_code_like()` auto-detection)
+- Anthropic Prompt Caching analysis module (`cache.py`)
+- `--cache` CLI flag for cache breakpoint analysis
+- `quick_slim()` cache_messages parameter for one-line cache savings estimate
 - README_zh.md Chinese documentation
+- Context-aware English filler removal (sentence-start only)
 
 ### Changed
-- Auto-registration for web_search tool on startup
+- Refactored redundancy engine with context-aware rules
+- More aggressive Chinese redundancy patterns while maintaining code safety
+- Improved mixed Chinese-English text handling
 
 ## [0.2.0] - 2026-06-16
 
 ### Added
-- Comprehensive README with architecture diagram
-- Badge optimization and English keywords
-- Repository structure documentation
+- Basic Chinese redundancy detection
+- Multi-model token counting (GPT / Claude / DeepSeek / Qwen)
+- CLI `count`, `slim`, `smart`, `compare` subcommands
+- Python SDK public API exports
 
 ### Fixed
-- Clone URL in README
+- Mixed Chinese-English redundancy detection
+- Chinese whitespace removal edge cases
+- Rich console encoding on Windows
 
 ## [0.1.0] - 2026-06-15
 
 ### Added
 - Initial release
-- LLM Agent core (OpenAI-compatible protocol)
-- Function Calling with tool registry
-- Plugin-based tool system (read_file, execute_sql, list_tables)
-- Multi-agent workflow engine (sequential/parallel/DAG)
-- Async tool execution with timeout and retry
-- Spring Boot admin backend with JPA
-- Docker Compose deployment
+- English redundancy pattern detection
+- Rule-based compression engine
+- Token counting with tiktoken
+- SlimReport with savings metrics
