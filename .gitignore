@@ -11,6 +11,4 @@ venv/
 !.env.example
 *.local
 secrets/**
-target/
-chroma_data/
-agent-orchestrator/
+.pytest_cache/
