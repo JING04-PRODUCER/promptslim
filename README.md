@@ -178,11 +178,11 @@ report = quick_slim(text)
 client = openai.OpenAI(base_url="http://localhost:8000/v1")
 response = client.chat.completions.create(
     model="gpt-4o",
-    messages=[{"role": "user", "content": report.slimmed}]
+    messages=[{"role": "user", "content": report.compressed}]
 )
 
 # 3. See estimated savings
-print(f"Estimated savings: ${report.cost_per_call_saved:.6f}/call")
+print(f"Estimated savings: ${report.cost_saved:.6f}/call")
 ```
 
 ## Project Structure

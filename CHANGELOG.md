@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.1] - 2026-06-25
+
+### Fixed
+- Restored 40+ Chinese & English redundancy patterns lost in 0.4.0 merge
+- Version unified across pyproject.toml and __init__.py
+- Test file renamed: test_prompslim.py → test_promptslim.py
+- README code examples fixed (report.slimmed → report.compressed, cost_per_call_saved → cost_saved)
+- CI workflow fixed for promptslim repo structure
+
 ## [0.4.0] - 2026-06-19
 
 ### Changed
