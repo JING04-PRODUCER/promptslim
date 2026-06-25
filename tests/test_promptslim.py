@@ -19,9 +19,9 @@ class TestTokenizer:
     def test_different_models(self):
         text = "The quick brown fox jumps over the lazy dog"
         gpt = count(text, "gpt-4o")
-        o3 = count(text, "gpt-4o")
+        claude = count(text, "claude-sonnet-4-6")
         assert gpt > 0
-        assert o3 > 0
+        assert claude > 0
 
     def test_est_zh(self):
         n = est_zh("这是一段中文测试文本用于验证估算")
